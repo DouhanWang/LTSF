@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Are Transformers Effective for Time Series Forecasting? (AAAI 2023)
 
 This repo is the official Pytorch implementation of LTSF-Linear: "[Are Transformers Effective for Time Series Forecasting?](https://arxiv.org/pdf/2205.13504.pdf)". 
@@ -130,3 +131,6 @@ If you find this repository useful for your work, please consider citing it as f
 ```
 
 Please remember to cite all the datasets and compared methods if you use them in your experiments.
+=======
+# LTSF
+>>>>>>> e08a3f5
