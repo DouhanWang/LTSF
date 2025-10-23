@@ -92,67 +92,69 @@ if args.use_gpu and args.use_multi_gpu:
 print('Args in experiment:')
 print(args)
 
-Exp = Exp_Main
+# changes
+if __name__ == '__main__':
+    Exp = Exp_Main
 
-if args.is_training:
-    for ii in range(args.itr):
-        # setting record of experiments
-        setting = '{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
-            args.model_id,
-            args.model,
-            args.data,
-            args.features,
-            args.seq_len,
-            args.label_len,
-            args.pred_len,
-            args.d_model,
-            args.n_heads,
-            args.e_layers,
-            args.d_layers,
-            args.d_ff,
-            args.factor,
-            args.embed,
-            args.distil,
-            args.des, ii)
+    if args.is_training:
+        for ii in range(args.itr):
+            # setting record of experiments
+            setting = '{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
+                args.model_id,
+                args.model,
+                args.data,
+                args.features,
+                args.seq_len,
+                args.label_len,
+                args.pred_len,
+                args.d_model,
+                args.n_heads,
+                args.e_layers,
+                args.d_layers,
+                args.d_ff,
+                args.factor,
+                args.embed,
+                args.distil,
+                args.des, ii)
+
+            exp = Exp(args)  # set experiments
+            print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
+            exp.train(setting)
+
+            if not args.train_only:
+                print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
+                exp.test(setting)
+
+            if args.do_predict:
+                print('>>>>>>>predicting : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
+                exp.predict(setting, True)
+
+            torch.cuda.empty_cache()
+    else:
+        ii = 0
+        setting = '{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(args.model_id,
+                                                                                                    args.model,
+                                                                                                    args.data,
+                                                                                                    args.features,
+                                                                                                    args.seq_len,
+                                                                                                    args.label_len,
+                                                                                                    args.pred_len,
+                                                                                                    args.d_model,
+                                                                                                    args.n_heads,
+                                                                                                    args.e_layers,
+                                                                                                    args.d_layers,
+                                                                                                    args.d_ff,
+                                                                                                    args.factor,
+                                                                                                    args.embed,
+                                                                                                    args.distil,
+                                                                                                    args.des, ii)
 
         exp = Exp(args)  # set experiments
-        print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
-        exp.train(setting)
-
-        if not args.train_only:
-            print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-            exp.test(setting)
 
         if args.do_predict:
             print('>>>>>>>predicting : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
             exp.predict(setting, True)
-
+        else:
+            print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
+            exp.test(setting, test=1)
         torch.cuda.empty_cache()
-else:
-    ii = 0
-    setting = '{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(args.model_id,
-                                                                                                  args.model,
-                                                                                                  args.data,
-                                                                                                  args.features,
-                                                                                                  args.seq_len,
-                                                                                                  args.label_len,
-                                                                                                  args.pred_len,
-                                                                                                  args.d_model,
-                                                                                                  args.n_heads,
-                                                                                                  args.e_layers,
-                                                                                                  args.d_layers,
-                                                                                                  args.d_ff,
-                                                                                                  args.factor,
-                                                                                                  args.embed,
-                                                                                                  args.distil,
-                                                                                                  args.des, ii)
-
-    exp = Exp(args)  # set experiments
-
-    if args.do_predict:
-        print('>>>>>>>predicting : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-        exp.predict(setting, True)
-    else:
-        print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-        exp.test(setting, test=1)
-    torch.cuda.empty_cache()
