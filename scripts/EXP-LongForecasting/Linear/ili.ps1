@@ -15,7 +15,7 @@ if (-not (Test-Path "./logs/LongForecasting")) {
 }
 
 # Define variables
-$seq_len = 104
+$seq_len = 36 #104
 $model_name = "DLinear"
 
 Write-Host "Running experiments for $model_name with seq_len=$seq_len"
