@@ -105,6 +105,11 @@ To train the **LTSF-Linear** on **Exchange-Rate dataset**, you can use the scrip
 ```
 sh scripts/EXP-LongForecasting/Linear/exchange_rate.sh
 ```
+In order to run it on Windows, you can first generate a ps1 version script and use the following code: 
+```
+powershell -ExecutionPolicy Bypass -File scripts\EXP-LongForecasting\run_autoformer_ili.ps1
+```
+
 It will start to train DLinear by default, the results will be shown in `logs/LongForecasting`. You can specify the name of the model in the script. (Linear, DLinear, NLinear)
 
 All scripts about using LTSF-Linear on long forecasting task is in `scripts/EXP-LongForecasting/Linear/`, you can run them in a similar way. The default look-back window in scripts is 336, LTSF-Linear generally achieves better results with longer look-back window as dicussed in the paper. 
@@ -131,6 +136,7 @@ If you find this repository useful for your work, please consider citing it as f
 ```
 
 Please remember to cite all the datasets and compared methods if you use them in your experiments.
+
 =======
 # LTSF
 >>>>>>> e08a3f5
