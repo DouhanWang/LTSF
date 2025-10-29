@@ -93,7 +93,7 @@ class Model(nn.Module):
                 for l in range(configs.d_layers)
             ],
             norm_layer=my_Layernorm(configs.d_model),
-            projection=nn.Linear(configs.d_model, configs.c_out, bias=True)
+            projection=nn.Linear(configs.d_model, configs.c_out * len(configs.quantiles), bias=True)
         )
 
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec,

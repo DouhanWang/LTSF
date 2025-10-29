@@ -3,6 +3,7 @@ from exp.exp_basic import Exp_Basic
 from models import Informer, Autoformer, Transformer, DLinear, Linear, NLinear
 from utils.tools import EarlyStopping, adjust_learning_rate, visual, test_params_flop
 from utils.metrics import metric
+from utils.losses import quantile_loss  # import your custom loss
 
 import numpy as np
 import pandas as pd
@@ -47,7 +48,17 @@ class Exp_Main(Exp_Basic):
         return model_optim
 
     def _select_criterion(self):
-        criterion = nn.MSELoss()
+        #criterion = nn.MSELoss()
+        if self.args.loss == 'mse':
+            criterion = nn.MSELoss()
+        elif self.args.loss == 'mae':
+            criterion = nn.L1Loss()
+        elif self.args.loss == 'quantile':
+            # wrap quantile_loss into a lambda to pass quantiles from args
+            def criterion(y_pred, y_true):
+                return quantile_loss(y_true, y_pred, self.args.quantiles)
+        else:
+            raise ValueError(f"Unknown loss type: {self.args.loss}")
         return criterion
 
     def vali(self, vali_data, vali_loader, criterion):
@@ -287,13 +298,31 @@ class Exp_Main(Exp_Basic):
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
-        mae, mse, rmse, mape, mspe, rse, corr = metric(preds, trues)
-        print('mse:{}, mae:{}'.format(mse, mae))
+        # mae, mse, rmse, mape, mspe, rse, corr = metric(preds, trues)
+        # print('mse:{}, mae:{}'.format(mse, mae))
+        from utils.metrics import metric
+
+        if self.args.loss == 'quantile':
+            results = metric(preds, trues, quantiles=self.args.quantiles)
+        else:
+            results = metric(preds, trues)
+
+        print(results)
+
         f = open("result.txt", 'a')
         f.write(setting + "  \n")
-        f.write('mse:{}, mae:{}, rse:{}, corr:{}'.format(mse, mae, rse, corr))
-        f.write('\n')
-        f.write('\n')
+        # f.write('mse:{}, mae:{}, rse:{}, corr:{}'.format(mse, mae, rse, corr))
+        # f.write('\n')
+        # f.write('\n')
+        if isinstance(results, dict):
+            for k, v in results.items():
+                f.write(f"{k}: {v:.6f}  ")
+        else:
+            # backward compatibility if results is a tuple
+            mae, mse, rmse, mape, mspe, rse, corr = results
+            f.write(f"mse:{mse:.6f}, mae:{mae:.6f}, rse:{rse:.6f}, corr:{corr:.6f}")
+
+        f.write('\n\n')
         f.close()
 
         # np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe,rse, corr]))
