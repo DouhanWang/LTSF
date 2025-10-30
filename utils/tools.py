@@ -81,17 +81,54 @@ class StandardScaler():
         return (data * self.std) + self.mean
 
 
-def visual(true, preds=None, name='./pic/test.pdf'):
-    """
-    Results visualization
-    """
-    plt.figure()
-    plt.plot(true, label='GroundTruth', linewidth=2)
-    if preds is not None:
-        plt.plot(preds, label='Prediction', linewidth=2)
-    plt.legend()
-    plt.savefig(name, bbox_inches='tight')
+# def visual(true, preds=None, name='./pic/test.pdf'):
+#     """
+#     Results visualization
+#     """
+#     plt.figure()
+#     plt.plot(true, label='GroundTruth', linewidth=2)
+#     if preds is not None:
+#         plt.plot(preds, label='Prediction', linewidth=2)
+#     plt.legend()
+#     plt.savefig(name, bbox_inches='tight')
 
+
+def visual(true, preds, path, lower=None, upper=None, seq_len=None):
+    plt.figure(figsize=(10, 6))
+
+    # --- Find the prediction start index ---
+    if seq_len is None:
+        # Fallback if seq_len is not provided
+        pred_start_idx = len(true) // 2
+    else:
+        pred_start_idx = seq_len  # This is the correct history length (e.g., 4)
+
+    # --- Plot the main lines ---
+    plt.plot(true, label='GroundTruth', color='black')
+    plt.plot(preds, label='Prediction (Median)', color='blue')
+
+    # --- Plot the uncertainty band ---
+    if lower is not None and upper is not None:
+        plt.fill_between(
+            x=range(pred_start_idx, len(true)),  # X-axis range (e.g., from 4 to 8)
+            y1=lower[pred_start_idx:],  # Lower bound
+            y2=upper[pred_start_idx:],  # Upper bound
+            color='lightblue',
+            alpha=0.5,
+            label='80% Prediction Interval'
+        )
+
+    # --- 1. Add Red Dotted Vertical Line ---
+    # Place at x=3.5 (right between step 3 and 4)
+    plt.axvline(x=pred_start_idx - 0.5, color='red', linestyle='--', label='Forecast Start')
+
+    # --- 2. Add Axis Labels ---
+    plt.xlabel('Time Step')
+    plt.ylabel('Scaled Value')
+
+    plt.legend()
+    plt.savefig(path)
+    plt.close()
 def test_params_flop(model,x_shape):
     """
     If you want to thest former's flop, you need to give default value to inputs in model.forward(), the following code can only pass one argument to forward()

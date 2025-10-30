@@ -142,3 +142,22 @@ mse:2.973094940185547, mae:1.1928997039794922, rse:0.8192060589790344, corr:[0.0
  0.06380533 0.06162632 0.0598978  0.05920794 0.05747524 0.05616511
  0.05547369 0.05378831 0.05206876 0.05105997 0.04970809 0.04841174]
 
+ili__Autoformer_custom_ftM_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc3_ebtimeF_dtTrue_Exp_Quantile_0  
+MAE: 1.260286  MSE: 3.339384  RMSE: 1.827398  MAPE: 3.092570  MSPE: 290.222961  RSE: 0.893749  ili__Autoformer_custom_ftM_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc3_ebtimeF_dtTrue_Exp_Quantile_0  
+MAE: 1.259653  MSE: 3.335548  RMSE: 1.826348  MAPE: 3.099590  MSPE: 290.860748  RSE: 0.893235  CORR: 0.065607  PICP: 0.468233  PINAW: 0.136304  
+
+ili__Autoformer_custom_ftM_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc3_ebtimeF_dtTrue_Exp_Quantile_0  
+MAE: 1.259687  MSE: 3.337802  RMSE: 1.826965  MAPE: 3.095423  MSPE: 291.550232  RSE: 0.893537  CORR: 0.065593  PICP: 0.468233  PINAW: 0.136229  
+
+italy_ili__Autoformer_custom_ftM_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_Quantile_0  
+MAE: 4.400571  MSE: 52.868530  RMSE: 7.271075  MAPE: 0.904028  MSPE: 0.916241  RSE: 1.085511  CORR: 0.014142  PICP: 0.000000  PINAW: 0.017026  
+
+italy_ili__Autoformer_custom_ftM_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_Quantile_0  
+MAE: 4.416418  MSE: 52.992687  RMSE: 7.279608  MAPE: 0.911772  MSPE: 0.929832  RSE: 1.086785  CORR: 0.014142  PICP: 0.000000  PINAW: 0.016172  
+
+italy_ili__Autoformer_custom_ftM_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_Quantile_0  
+MAE: 4.416418  MSE: 52.992687  RMSE: 7.279608  MAPE: 0.911772  MSPE: 0.929832  RSE: 1.086785  CORR: 0.014142  PICP: 0.000000  PINAW: 0.016172  
+
+italy_ili__Autoformer_custom_ftM_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_Quantile_0  
+MAE: 4.400571  MSE: 52.868530  RMSE: 7.271075  MAPE: 0.904028  MSPE: 0.916241  RSE: 1.085511  CORR: 0.014142  PICP: 0.000000  PINAW: 0.017026  
+

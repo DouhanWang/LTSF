@@ -67,14 +67,38 @@ class Exp_Main(Exp_Basic):
         with torch.no_grad():
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
                 batch_x = batch_x.float().to(self.device)
-                batch_y = batch_y.float()
+                batch_y = batch_y.float().to(self.device)
 
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
+                # # decoder input
+                # dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
+                # dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
                 # decoder input
-                dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+                if self.args.loss == 'quantile':
+                    # For quantile loss, we must expand the decoder input to match dec_in (which is 21)
+                    num_quantiles = len(self.args.quantiles)  # e.g., 3
+
+                    # 1. Create the "zero" part with the correct quantile dimension
+                    # Use dec_in here, which you set to 21 in the script
+                    zeros_shape = (batch_y.shape[0], self.args.pred_len, self.args.dec_in)
+                    dec_inp_zeros = torch.zeros(zeros_shape).float().to(self.device)
+
+                    # 2. Create the "label" part by repeating the ground truth for each quantile
+                    label_part = batch_y[:, :self.args.label_len, :]  # Shape: (batch, label_len, 7)
+
+                    # Repeat tensor 'num_quantiles' times along the last dimension
+                    # Shape becomes (batch, label_len, 7 * 3) = (batch, label_len, 21)
+                    dec_inp_label = label_part.repeat(1, 1, num_quantiles)
+
+                    # 3. Concatenate them
+                    dec_inp = torch.cat([dec_inp_label, dec_inp_zeros], dim=1).float().to(self.device)
+
+                else:
+                    # Original logic
+                    dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
+                    dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
                 # encoder - decoder
                 if self.args.use_amp:
                     with torch.cuda.amp.autocast():
@@ -143,9 +167,33 @@ class Exp_Main(Exp_Basic):
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
+                # # decoder input
+                # dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
+                # dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
                 # decoder input
-                dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+                if self.args.loss == 'quantile':
+                    # For quantile loss, we must expand the decoder input to match dec_in (which is 21)
+                    num_quantiles = len(self.args.quantiles)  # e.g., 3
+
+                    # 1. Create the "zero" part with the correct quantile dimension
+                    # Use dec_in here, which you set to 21 in the script
+                    zeros_shape = (batch_y.shape[0], self.args.pred_len, self.args.dec_in)
+                    dec_inp_zeros = torch.zeros(zeros_shape).float().to(self.device)
+
+                    # 2. Create the "label" part by repeating the ground truth for each quantile
+                    label_part = batch_y[:, :self.args.label_len, :]  # Shape: (batch, label_len, 7)
+
+                    # Repeat tensor 'num_quantiles' times along the last dimension
+                    # Shape becomes (batch, label_len, 7 * 3) = (batch, label_len, 21)
+                    dec_inp_label = label_part.repeat(1, 1, num_quantiles)
+
+                    # 3. Concatenate them
+                    dec_inp = torch.cat([dec_inp_label, dec_inp_zeros], dim=1).float().to(self.device)
+
+                else:
+                    # Original logic
+                    dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
+                    dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
 
                 # encoder - decoder
                 if self.args.use_amp:
@@ -171,7 +219,7 @@ class Exp_Main(Exp_Basic):
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
                             
                         else:
-                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark, batch_y)
+                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark) # change , batch_y
                     # print(outputs.shape,batch_y.shape)
                     f_dim = -1 if self.args.features == 'MS' else 0
                     outputs = outputs[:, -self.args.pred_len:, f_dim:]
@@ -243,9 +291,35 @@ class Exp_Main(Exp_Basic):
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
+                # # decoder input
+                # dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
+                # dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+
                 # decoder input
-                dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+                if self.args.loss == 'quantile':
+                    # For quantile loss, we must expand the decoder input to match dec_in (which is 21)
+                    num_quantiles = len(self.args.quantiles)  # e.g., 3
+
+                    # 1. Create the "zero" part with the correct quantile dimension
+                    # Use dec_in here, which you set to 21 in the script
+                    zeros_shape = (batch_y.shape[0], self.args.pred_len, self.args.dec_in)
+                    dec_inp_zeros = torch.zeros(zeros_shape).float().to(self.device)
+
+                    # 2. Create the "label" part by repeating the ground truth for each quantile
+                    label_part = batch_y[:, :self.args.label_len, :]  # Shape: (batch, label_len, 7)
+
+                    # Repeat tensor 'num_quantiles' times along the last dimension
+                    # Shape becomes (batch, label_len, 7 * 3) = (batch, label_len, 21)
+                    dec_inp_label = label_part.repeat(1, 1, num_quantiles)
+
+                    # 3. Concatenate them
+                    dec_inp = torch.cat([dec_inp_label, dec_inp_zeros], dim=1).float().to(self.device)
+
+                else:
+                    # Original logic
+                    dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
+                    dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+
                 # encoder - decoder
                 if self.args.use_amp:
                     with torch.cuda.amp.autocast():
@@ -279,11 +353,55 @@ class Exp_Main(Exp_Basic):
                 preds.append(pred)
                 trues.append(true)
                 inputx.append(batch_x.detach().cpu().numpy())
+                # if i % 20 == 0:
+                #     input = batch_x.detach().cpu().numpy()
+                #     gt = np.concatenate((input[0, :, -1], true[0, :, -1]), axis=0)
+                #     pd = np.concatenate((input[0, :, -1], pred[0, :, -1]), axis=0)
+                #     visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
+                # NEW CODE for test() method
                 if i % 20 == 0:
                     input = batch_x.detach().cpu().numpy()
+                    # Get ground truth for the last feature (e.g., incidenza)
                     gt = np.concatenate((input[0, :, -1], true[0, :, -1]), axis=0)
-                    pd = np.concatenate((input[0, :, -1], pred[0, :, -1]), axis=0)
-                    visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
+
+                    # Get the sequence length (history length)
+                    seq_len = self.args.seq_len
+
+                    if self.args.loss == 'quantile':
+                        # --- Quantile Plotting Logic ---
+
+                        # Reshape (batch, 4, 9) -> (batch, 4, 3_features, 3_quantiles)
+                        num_quantiles = len(self.args.quantiles)
+                        num_features = self.args.enc_in
+                        pred_reshaped = pred.reshape(pred.shape[0], pred.shape[1], num_features, num_quantiles)
+
+                        # Get quantiles for the *last feature*
+                        pred_lower = pred_reshaped[0, :, -1, 0]  # 10th percentile
+                        pred_median = pred_reshaped[0, :, -1, 1]  # 50th percentile
+                        pred_upper = pred_reshaped[0, :, -1, 2]  # 90th percentile
+
+                        # Concatenate history for the plot
+                        pd_lower_full = np.concatenate((input[0, :, -1], pred_lower), axis=0)
+                        pd_median_full = np.concatenate((input[0, :, -1], pred_median), axis=0)
+                        pd_upper_full = np.concatenate((input[0, :, -1], pred_upper), axis=0)
+
+                        # Call visual() with all arguments as KEYWORDS
+                        visual(true=gt,
+                               preds=pd_median_full,
+                               path=os.path.join(folder_path, str(i) + '.pdf'),
+                               lower=pd_lower_full,
+                               upper=pd_upper_full,
+                               seq_len=seq_len)
+
+                    else:
+                        # --- Standard (Non-Quantile) Logic ---
+                        pd = np.concatenate((input[0, :, -1], pred[0, :, -1]), axis=0)
+
+                        # Call visual() with only the arguments we have, using KEYWORDS
+                        visual(true=gt,
+                               preds=pd,
+                               path=os.path.join(folder_path, str(i) + '.pdf'),
+                               seq_len=seq_len)
 
         if self.args.test_flop:
             test_params_flop((batch_x.shape[1],batch_x.shape[2]))

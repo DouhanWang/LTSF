@@ -9,7 +9,7 @@ def CORR(pred, true):
     u = ((true - true.mean(0)) * (pred - pred.mean(0))).sum(0)
     d = np.sqrt(((true - true.mean(0)) ** 2 * (pred - pred.mean(0)) ** 2).sum(0))
     d += 1e-12
-    return 0.01*(u / d).mean(-1)
+    return 0.01*(u / d).mean()
 
 
 def MAE(pred, true):
@@ -51,18 +51,48 @@ def PINAW(pred_lower, pred_upper, true):
 #     return mae, mse, rmse, mape, mspe, rse, corr
 def metric(pred, true, quantiles=None):
     """
-    pred: [B, L, C] for deterministic, or [B, L, C, Q] for quantile outputs
+    pred: [B, L, C] for deterministic, or [B, L, C*Q] for quantile outputs
     true: [B, L, C]
     quantiles: list of quantile levels, e.g. [0.1, 0.5, 0.9]
     """
 
-    # If quantile predictions are used, select median (0.5)
-    if pred.ndim == 4 and quantiles is not None:
-        q_idx = quantiles.index(0.5)
-        pred_median = pred[..., q_idx]
-    else:
-        pred_median = pred
+    if quantiles is not None and pred.shape[-1] != true.shape[-1]:
+        # --- THIS IS THE FIX ---
+        # We have quantile predictions that are "flat"
 
+        # 1. Get dimensions
+        num_quantiles = len(quantiles)  # e.g., 3
+        num_features = true.shape[-1]  # e.g., 7
+
+        # 2. Reshape pred from (B, L, C*Q) to (B, L, C, Q)
+        # e.g., (190, 4, 21) -> (190, 4, 7, 3)
+        try:
+            pred_reshaped = pred.reshape(pred.shape[0], pred.shape[1], num_features, num_quantiles)
+        except ValueError as e:
+            print(f"Error reshaping pred: {e}")
+            print(f"Pred shape: {pred.shape}, True shape: {true.shape}, Num quantiles: {num_quantiles}")
+            # Fallback to just comparing first channel if reshape fails
+            pred_median = pred[..., 0]
+
+            # 3. Find median index (e.g., index 1 for [0.1, 0.5, 0.9])
+        try:
+            median_idx = quantiles.index(0.5)
+        except ValueError:
+            median_idx = num_quantiles // 2  # Fallback
+
+        # 4. Extract median prediction
+        pred_median = pred_reshaped[..., median_idx]
+
+        # 5. Extract bounds for PICP/PINAW (using your new logic)
+        lower_bound = pred_reshaped[..., 0]  # Assumes 0.1 is first
+        upper_bound = pred_reshaped[..., -1]  # Assumes 0.9 is last
+
+    else:
+        # Standard deterministic prediction
+        pred_median = pred
+        pred_reshaped = None  # No quantiles
+
+    # --- Calculate standard metrics on the median ---
     mae = MAE(pred_median, true)
     mse = MSE(pred_median, true)
     rmse = RMSE(pred_median, true)
@@ -81,12 +111,10 @@ def metric(pred, true, quantiles=None):
         'CORR': corr,
     }
 
-    # Add coverage metrics if quantile predictions exist
-    if pred.ndim == 4 and quantiles is not None and len(quantiles) >= 3:
-        lower = pred[..., 0]   # e.g. q=0.1
-        upper = pred[..., -1]  # e.g. q=0.9
-        picp = PICP(lower, upper, true)
-        pinaw = PINAW(lower, upper, true)
+    # --- Add coverage metrics if quantiles exist ---
+    if pred_reshaped is not None:
+        picp = PICP(lower_bound, upper_bound, true)
+        pinaw = PINAW(lower_bound, upper_bound, true)
         results.update({'PICP': picp, 'PINAW': pinaw})
 
     return results
