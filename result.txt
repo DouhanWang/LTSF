@@ -161,3 +161,9 @@ MAE: 4.416418  MSE: 52.992687  RMSE: 7.279608  MAPE: 0.911772  MSPE: 0.929832  R
 italy_ili__Autoformer_custom_ftM_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_Quantile_0  
 MAE: 4.400571  MSE: 52.868530  RMSE: 7.271075  MAPE: 0.904028  MSPE: 0.916241  RSE: 1.085511  CORR: 0.014142  PICP: 0.000000  PINAW: 0.017026  
 
+italy_ili__Autoformer_custom_ftM_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_Quantile_0  
+MAE: 6.814880  MSE: 73.765182  RMSE: 8.588666  MAPE: 1.162659  MSPE: 2.026655  RSE: 1.625229  CORR: 0.007113  PICP: 0.261111  PINAW: 0.199466  
+
+italy_ili__Autoformer_custom_ftM_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_Quantile_0  
+MAE: 6.801200  MSE: 72.997276  RMSE: 8.543844  MAPE: 1.163310  MSPE: 2.012785  RSE: 1.616747  CORR: 0.009166  PICP: 0.200000  PINAW: 0.162184  
+

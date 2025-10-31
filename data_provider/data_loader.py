@@ -329,7 +329,7 @@ class Dataset_Custom(Dataset):
                                           self.data_path))
 
 
-        if 'italia_2025_17_ILI.csv' in self.data_path:
+        if 'italia_17_25_ILI.csv' in self.data_path:
             # 1. Create 'date' column from 'anno' (year) and 'settimana' (week)
             # We use '1' for Monday as the day of the week (format: %Y %W %w)
             df_raw['date_str'] = df_raw['anno'].astype(str) + ' ' + df_raw['settimana'].astype(str) + ' 1'

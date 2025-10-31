@@ -21,10 +21,11 @@ foreach ($pred_len in $pred_lens) {
 
     # python -u run_longExp.py `
     # dec_in,c_out 9(3 featuresx 3 quantiles) `
-    & "C:\Users\Douhan\anaconda3\envs\ltsf-gpu\python.exe" -u run_longExp.py `
+    #Douhan
+    & "C:\Users\15952\anaconda3\envs\ltsf-gpu\python.exe" -u run_longExp.py `
         --is_training 1 `
         --root_path ./dataset/ `
-        --data_path italia_2025_17_ILI.csv `
+        --data_path italia_17_25_ILI.csv `
         --model_id italy_ili_$seq_len_$pred_len_quantile `
         --model $model_name `
         --data custom `
@@ -45,7 +46,7 @@ foreach ($pred_len in $pred_lens) {
         --loss quantile `
         --quantiles 0.1 0.5 0.9 `
         --itr 1 `
-        --batch_size 1 `
+        --batch_size 4 `
         --use_gpu True `
         --gpu 0 `
         *> "logs/ShortForecasting/${model_name}_italy_ili_${seq_len}_${pred_len}_quantile.log"
