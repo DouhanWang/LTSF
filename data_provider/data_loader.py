@@ -4,7 +4,7 @@ import pandas as pd
 import os
 import torch
 from torch.utils.data import Dataset, DataLoader
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from utils.timefeatures import time_features
 import warnings
 
@@ -324,7 +324,7 @@ class Dataset_Custom(Dataset):
         self.__read_data__()
 
     def __read_data__(self):
-        self.scaler = StandardScaler()
+        self.scaler = MinMaxScaler()# StandardScaler()
         df_raw = pd.read_csv(os.path.join(self.root_path,
                                           self.data_path))
 
@@ -336,7 +336,7 @@ class Dataset_Custom(Dataset):
             df_raw['date'] = pd.to_datetime(df_raw['date_str'], format='%Y %W %w')
 
             # 2. Define the numerical feature columns we want to use
-            numeric_cols = ['numero_casi', 'numero_assistiti', 'incidenza']
+            numeric_cols = ['numero_assistiti', 'incidenza'] # 'numero_casi',
 
             # 3. Re-filter df_raw to only contain the new 'date' and the numeric features
             # This makes it compatible with the rest of the script's logic
@@ -351,9 +351,28 @@ class Dataset_Custom(Dataset):
             cols.remove(self.target)
         cols.remove('date')  # This will now work
 
-        num_train = int(len(df_raw) * (0.7 if not self.train_only else 1))
-        num_test = int(len(df_raw) * 0.2)
-        num_vali = len(df_raw) - num_train - num_test
+        # num_train = int(len(df_raw) * (0.7 if not self.train_only else 1))
+        # num_test = int(len(df_raw) * 0.2)
+        # num_vali = len(df_raw) - num_train - num_test
+        num_test = 4
+
+        if self.train_only:
+            # If train_only, use all data for training
+            num_train = len(df_raw)
+            num_vali = 0
+            num_test = 0
+        else:
+            # We have fixed num_test = 4.
+            # Now, we split the rest of the data between train and validation.
+            # We can keep the original 7:1 ratio (0.7 train / 0.1 vali).
+
+            remaining_data = len(df_raw) - num_test
+
+            # Allocate 1/8th of the remaining data to validation
+            num_vali = int(remaining_data / 8)
+
+            # Allocate the other 7/8ths to training
+            num_train = remaining_data - num_vali
         border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
         border2s = [num_train, num_train + num_vali, len(df_raw)]
         border1 = border1s[self.set_type]
@@ -412,7 +431,7 @@ class Dataset_Custom(Dataset):
 class Dataset_Pred(Dataset):
     def __init__(self, root_path, flag='pred', size=None,
                  features='S', data_path='ETTh1.csv',
-                 target='OT', scale=True, inverse=False, timeenc=0, freq='15min', cols=None, train_only=False):
+                 target='OT', scale=False, inverse=False, timeenc=0, freq='15min', cols=None, train_only=False):
         # size [seq_len, label_len, pred_len]
         # info
         if size == None:

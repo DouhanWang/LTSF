@@ -21,8 +21,8 @@ foreach ($pred_len in $pred_lens) {
 
     # python -u run_longExp.py `
     # dec_in,c_out 9(3 featuresx 3 quantiles) `
-    #Douhan
-    & "C:\Users\15952\anaconda3\envs\ltsf-gpu\python.exe" -u run_longExp.py `
+    #15952 or Douhan
+    & "C:\Users\Douhan\anaconda3\envs\ltsf-gpu\python.exe" -u run_longExp.py `
         --is_training 1 `
         --root_path ./dataset/ `
         --data_path italia_17_25_ILI.csv `

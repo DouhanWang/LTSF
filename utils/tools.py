@@ -115,16 +115,15 @@ def visual(true, preds, path, lower=None, upper=None, seq_len=None):
             y2=upper[pred_start_idx:],  # Upper bound
             color='lightblue',
             alpha=0.5,
-            label='80% Prediction Interval'
+            label='95% Prediction Interval'
         )
 
-    # --- 1. Add Red Dotted Vertical Line ---
-    # Place at x=3.5 (right between step 3 and 4)
-    plt.axvline(x=pred_start_idx - 0.5, color='red', linestyle='--', label='Forecast Start')
+
+    plt.axvline(x=pred_start_idx - 1, color='red', linestyle='--', label='Forecast Start')
 
     # --- 2. Add Axis Labels ---
     plt.xlabel('Time Step')
-    plt.ylabel('Scaled Value')
+    plt.ylabel('Incidenza')
 
     plt.legend()
     plt.savefig(path)
