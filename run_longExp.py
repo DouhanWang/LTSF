@@ -1,5 +1,6 @@
 import argparse
 import os
+import matplotlib.pyplot as plt
 import torch
 from exp.exp_main import Exp_Main
 import random
@@ -38,6 +39,17 @@ parser.add_argument('--pred_len', type=int, default=96, help='prediction sequenc
 
 # DLinear
 parser.add_argument('--individual', action='store_true', default=False, help='DLinear: a linear layer for each variate(channel) individually')
+#ARIMA
+parser.add_argument('--arima_p', type=int, default=1)
+parser.add_argument('--arima_d', type=int, default=0)
+parser.add_argument('--arima_q', type=int, default=0)
+parser.add_argument('--arima_alpha', type=float, default=0.2)  # 80% CI -> alpha=0.2
+parser.add_argument('--arima_trend', type=str, default='n',
+                    help='ARIMA trend: n/c/t/ct (statsmodels)')
+parser.add_argument('--arima_maxiter', type=int, default=200,
+                    help='Max iterations for ARIMA fit')
+
+
 # Formers 
 parser.add_argument('--embed_type', type=int, default=0, help='0: default 1: value embedding + temporal embedding + positional embedding 2: value embedding + temporal embedding 3: value embedding + positional embedding 4: value embedding')
 parser.add_argument('--enc_in', type=int, default=7, help='encoder input size') # DLinear with --individual, use this hyperparameter as the number of channels
@@ -122,6 +134,7 @@ if __name__ == '__main__':
             exp = Exp(args)  # set experiments
             print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
             exp.train(setting)
+
 
             if not args.train_only:
                 print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))

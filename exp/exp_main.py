@@ -1,8 +1,9 @@
 from data_provider.data_factory import data_provider
 from exp.exp_basic import Exp_Basic
-from models import Informer, Autoformer, Transformer, DLinear, Linear, NLinear
+from models import Informer, Autoformer, Transformer, DLinear, Linear, NLinear, LSTM, Naive, ARIMA
 from utils.tools import EarlyStopping, adjust_learning_rate, visual, test_params_flop
-from utils.metrics import metric
+from utils.metrics import metric, mean_WIS_interval, PICP
+
 from utils.losses import quantile_loss  # import your custom loss
 #from tabpfn_ts.models.tabpfn_ts import TabPFN_ts
 import numpy as np
@@ -17,6 +18,7 @@ import time
 import warnings
 import matplotlib.pyplot as plt
 import numpy as np
+print(">>> USING exp_main from:", __file__)
 
 warnings.filterwarnings('ignore')
 
@@ -24,6 +26,9 @@ class Exp_Main(Exp_Basic):
     def __init__(self, args):
         super(Exp_Main, self).__init__(args)
         self.global_sigma = None # sd
+        self.res_q_low = None   # ✅ 保存每个 horizon 的 q10 residual
+        self.res_q_high = None  # ✅ 保存每个 horizon 的 q90 residual
+
     def _build_model(self):
         model_dict = {
             'Autoformer': Autoformer,
@@ -32,9 +37,13 @@ class Exp_Main(Exp_Basic):
             'DLinear': DLinear,
             'NLinear': NLinear,
             'Linear': Linear,
-            #'TabPFN_ts': TabPFN_ts
+            'LSTM': LSTM,
+            'Naive': Naive,
+            'ARIMA': ARIMA,
+            #'TabPFN_ts': TabPFN_ts,
         }
         model = model_dict[self.args.model].Model(self.args).float()
+
 
         if self.args.use_multi_gpu and self.args.use_gpu:
             model = nn.DataParallel(model, device_ids=self.args.device_ids)
@@ -54,10 +63,6 @@ class Exp_Main(Exp_Basic):
             criterion = nn.MSELoss()
         elif self.args.loss == 'mae':
             criterion = nn.L1Loss()
-        elif self.args.loss == 'quantile':
-            # wrap quantile_loss into a lambda to pass quantiles from args
-            def criterion(y_pred, y_true):
-                return quantile_loss(y_true, y_pred, self.args.quantiles)
         else:
             raise ValueError(f"Unknown loss type: {self.args.loss}")
         return criterion
@@ -75,33 +80,10 @@ class Exp_Main(Exp_Basic):
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
-                # # decoder input
-                # dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-                # dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
                 # decoder input
-                if self.args.loss == 'quantile':
-                    # For quantile loss, we must expand the decoder input to match dec_in (which is 21)
-                    num_quantiles = len(self.args.quantiles)  # e.g., 3
+                dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
+                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
 
-                    # 1. Create the "zero" part with the correct quantile dimension
-                    # Use dec_in here, which you set to 21 in the script
-                    zeros_shape = (batch_y.shape[0], self.args.pred_len, self.args.dec_in)
-                    dec_inp_zeros = torch.zeros(zeros_shape).float().to(self.device)
-
-                    # 2. Create the "label" part by repeating the ground truth for each quantile
-                    label_part = batch_y[:, :self.args.label_len, :]  # Shape: (batch, label_len, 7)
-
-                    # Repeat tensor 'num_quantiles' times along the last dimension
-                    # Shape becomes (batch, label_len, 7 * 3) = (batch, label_len, 21)
-                    dec_inp_label = label_part.repeat(1, 1, num_quantiles)
-
-                    # 3. Concatenate them
-                    dec_inp = torch.cat([dec_inp_label, dec_inp_zeros], dim=1).float().to(self.device)
-
-                else:
-                    # Original logic
-                    dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-                    dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
                 # encoder - decoder
                 if self.args.use_amp:
                     with torch.cuda.amp.autocast():
@@ -121,13 +103,8 @@ class Exp_Main(Exp_Basic):
                         else:
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
                 f_dim = -1 if self.args.features == 'MS' else 0
-                if self.args.loss == 'quantile' and self.args.features == 'MS':
-                    # We need the quantiles for the *target* feature only.
-                    # Since target is the last feature, we take the last num_quantiles channels.
-                    num_quantiles = len(self.args.quantiles)
-                    outputs = outputs[:, -self.args.pred_len:, -num_quantiles:]  # Shape (batch, pred_len, 3)
-                else:
-                    outputs = outputs[:, -self.args.pred_len:, f_dim:]
+
+                outputs = outputs[:, -self.args.pred_len:, f_dim:]
                 batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
 
                 pred = outputs.detach().cpu()
@@ -143,6 +120,80 @@ class Exp_Main(Exp_Basic):
         all_trues = np.concatenate(all_trues, axis=0)  # Add this
         self.model.train()
         return total_loss, all_preds, all_trues
+
+    def _inverse_3d(self, dataset, arr3d):
+        """arr3d: (B, L, C) -> inverse_transform per feature"""
+        B, L, C = arr3d.shape
+        flat = arr3d.reshape(-1, C)
+        inv = dataset.inverse_transform(flat)
+        return inv.reshape(B, L, C)
+
+    def _calibrate_residual_quantiles(self, vali_data, vali_loader, alpha=0.2):
+        """
+        用 validation 的所有窗口、所有 horizon 残差，计算分位数残差区间：
+          q_low[h] = quantile(residual_h, alpha/2)
+          q_high[h] = quantile(residual_h, 1-alpha/2)
+        返回 q_low, q_high，长度 pred_len
+        """
+        pred_len = self.args.pred_len
+        residuals = [[] for _ in range(pred_len)]
+
+        self.model.eval()
+        with torch.no_grad():
+            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
+                batch_x = batch_x.float().to(self.device)
+                batch_y = batch_y.float().to(self.device)
+                batch_x_mark = batch_x_mark.float().to(self.device)
+                batch_y_mark = batch_y_mark.float().to(self.device)
+
+                # decoder input（跟你 vali/test 保持一致）
+                dec_inp = torch.zeros_like(batch_y[:, -pred_len:, :]).float()
+                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+
+                # forward
+                if 'Linear' in self.args.model:
+                    outputs = self.model(batch_x)
+                else:
+                    outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+                    if self.args.output_attention:
+                        outputs = outputs[0]
+
+                f_dim = -1 if self.args.features == 'MS' else 0
+                outputs = outputs[:, -pred_len:, f_dim:]
+                true = batch_y[:, -pred_len:, f_dim:]
+
+                pred_np = outputs.detach().cpu().numpy()
+                true_np = true.detach().cpu().numpy()
+
+                # ✅ 统一到真实尺度后再算 residual（非常关键）
+                if vali_data.scale:
+                    pred_np = self._inverse_3d(vali_data, pred_np)
+                    true_np = self._inverse_3d(vali_data, true_np)
+
+                # ✅ 只取 target（最后一列）
+                pred_t = pred_np[..., -1]  # (B, pred_len)
+                true_t = true_np[..., -1]  # (B, pred_len)
+
+                for h in range(pred_len):
+                    residuals[h].append(true_t[:, h] - pred_t[:, h])
+
+        self.model.train()
+
+        q_low = np.zeros(pred_len, dtype=float)
+        q_high = np.zeros(pred_len, dtype=float)
+
+        for h in range(pred_len):
+            if len(residuals[h]) == 0:
+                # fallback：如果某个 horizon 没数据，设为 0（很少发生）
+                q_low[h] = 0.0
+                q_high[h] = 0.0
+                continue
+            r = np.concatenate(residuals[h], axis=0)  # (N,)
+            q_low[h] = float(np.quantile(r, alpha / 2.0))
+            q_high[h] = float(np.quantile(r, 1.0 - alpha / 2.0))
+
+        return q_low, q_high
+
 
     def train(self, setting):
         train_data, train_loader = self._get_data(flag='train')
@@ -164,6 +215,11 @@ class Exp_Main(Exp_Basic):
 
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
+        # ==========================
+        # 记录每个epoch的loss，用于画history曲线
+        # ==========================
+        train_loss_history = []
+        vali_loss_history = []
 
         for epoch in range(self.args.train_epochs):
             iter_count = 0
@@ -171,6 +227,8 @@ class Exp_Main(Exp_Basic):
 
             self.model.train()
             epoch_time = time.time()
+            print("Start iterating train_loader...")
+
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
                 iter_count += 1
                 model_optim.zero_grad()
@@ -180,33 +238,10 @@ class Exp_Main(Exp_Basic):
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
-                # # decoder input
-                # dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-                # dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
                 # decoder input
-                if self.args.loss == 'quantile':
-                    # For quantile loss, we must expand the decoder input to match dec_in (which is 21)
-                    num_quantiles = len(self.args.quantiles)  # e.g., 3
+                dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
+                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
 
-                    # 1. Create the "zero" part with the correct quantile dimension
-                    # Use dec_in here, which you set to 21 in the script
-                    zeros_shape = (batch_y.shape[0], self.args.pred_len, self.args.dec_in)
-                    dec_inp_zeros = torch.zeros(zeros_shape).float().to(self.device)
-
-                    # 2. Create the "label" part by repeating the ground truth for each quantile
-                    label_part = batch_y[:, :self.args.label_len, :]  # Shape: (batch, label_len, 7)
-
-                    # Repeat tensor 'num_quantiles' times along the last dimension
-                    # Shape becomes (batch, label_len, 7 * 3) = (batch, label_len, 21)
-                    dec_inp_label = label_part.repeat(1, 1, num_quantiles)
-
-                    # 3. Concatenate them
-                    dec_inp = torch.cat([dec_inp_label, dec_inp_zeros], dim=1).float().to(self.device)
-
-                else:
-                    # Original logic
-                    dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-                    dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
 
                 # encoder - decoder
                 if self.args.use_amp:
@@ -235,13 +270,8 @@ class Exp_Main(Exp_Basic):
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark) # change , batch_y
                     # print(outputs.shape,batch_y.shape)
                     f_dim = -1 if self.args.features == 'MS' else 0
-                    if self.args.loss == 'quantile' and self.args.features == 'MS':
-                        # We need the quantiles for the *target* feature only.
-                        # Since target is the last feature, we take the last num_quantiles channels.
-                        num_quantiles = len(self.args.quantiles)
-                        outputs = outputs[:, -self.args.pred_len:, -num_quantiles:]  # Shape (batch, pred_len, 3)
-                    else:
-                        outputs = outputs[:, -self.args.pred_len:, f_dim:]
+
+                    outputs = outputs[:, -self.args.pred_len:, f_dim:]
                     batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
                     loss = criterion(outputs, batch_y)
                     train_loss.append(loss.item())
@@ -264,14 +294,18 @@ class Exp_Main(Exp_Basic):
 
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             train_loss = np.average(train_loss)
+            train_loss_history.append(train_loss)
+
             if not self.args.train_only:
                 # vali_loss = self.vali(vali_data, vali_loader, criterion)
                 # test_loss = self.vali(test_data, test_loader, criterion)
                 vali_loss, _, _ = self.vali(vali_data, vali_loader, criterion)  # Update this line
-                test_loss, _, _ = self.vali(test_data, test_loader, criterion)  # Update this line
+                vali_loss_history.append(vali_loss)
+                # test_loss, _, _ = self.vali(test_data, test_loader, criterion)
+                # 旧逻辑：每个epoch都在test上算loss；现在不需要，避免训练过程中反复查看test
 
-                print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
-                    epoch + 1, train_steps, train_loss, vali_loss, test_loss))
+                print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f}".format(
+                    epoch + 1, train_steps, train_loss, vali_loss)) #Test Loss: {4:.7f} , test_loss
                 early_stopping(vali_loss, self.model, path)
             else:
                 print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f}".format(
@@ -283,275 +317,374 @@ class Exp_Main(Exp_Basic):
                 break
 
             adjust_learning_rate(model_optim, epoch + 1, self.args)
+        # ==========================
+        # 保存history plot到 logs/LookBackWindow/historyplot/
+        # ==========================
+        try:
+            history_dir = os.path.join('logs', 'LookBackWindow', 'historyplot')
+            os.makedirs(history_dir, exist_ok=True)
+
+            plt.figure()
+            plt.plot(train_loss_history, label='train_loss')
+            if len(vali_loss_history) > 0:
+                plt.plot(vali_loss_history, label='val_loss')
+            plt.xlabel('epoch')
+            plt.ylabel('loss')
+            plt.legend()
+
+            # 按你指定的命名规则
+            fname = f"{self.args.model}_simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_{self.args.seq_len}_{self.args.moving_avg}.png"
+            plt.savefig(os.path.join(history_dir, fname), dpi=200, bbox_inches='tight')
+            plt.close()
+            print(f"Saved history plot: {os.path.join(history_dir, fname)}")
+        except Exception as e:
+            print(f"Warning: could not save history plot. Error: {e}")
 
         best_model_path = path + '/' + 'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
         # --- NEW BLOCK TO CALCULATE SIGMA ---
         print("Calculating global sigma from validation set residuals...")
+        # ✅ NEW: 用 validation 残差分位数校准 80% 区间
         if not self.args.train_only:
-            # Rerun validation on the best model
-            vali_loss, vali_preds, vali_trues = self.vali(vali_data, vali_loader, criterion)
-            # Calculate errors (residuals)
-            errors = vali_trues - vali_preds
-            # Calculate standard deviation of errors
-            self.global_sigma = np.std(errors)  # This is the SCALED sigma
-            scaled_sigma = self.global_sigma
+            try:
+                print("Calibrating residual quantiles on validation set for WIS(80%)...")
+                q_low, q_high = self._calibrate_residual_quantiles(vali_data, vali_loader, alpha=0.2)
+                self.res_q_low = q_low
+                self.res_q_high = q_high
+                print("Residual quantiles (q10/q90) by horizon:", list(zip(q_low, q_high)))
 
-            # --- ADDED: Reverscale sigma for logging ---
-            real_sigma = 0
-            if vali_data.scale:
-                try:
-                    if hasattr(vali_data.scaler, 'min_'):  # MinMaxScaler
-                        target_scale = vali_data.scaler.scale_[-1]
-                        real_sigma = self.global_sigma / target_scale
-                    elif hasattr(vali_data.scaler, 'mean_'):  # StandardScaler
-                        target_scale = vali_data.scaler.scale_[-1]  # std
-                        real_sigma = self.global_sigma * target_scale
-                except Exception as e:
-                    print(f"Warning: could not reverscale global sigma for logging. Error: {e}")
-                    real_sigma = scaled_sigma  # fallback
-            else:
-                real_sigma = scaled_sigma  # It's already in real units
 
-            print(f"Global sigma (std dev of scaled residuals) calculated: {scaled_sigma:.6f}")
-            print(f"Global sigma (REVERSCALED) calculated: {real_sigma:.6f}")
-            # --- END OF ADDED BLOCK ---
-
+            except Exception as e:
+                print(f"Warning: residual quantile calibration failed: {e}")
+                self.res_q_low = None
+                self.res_q_high = None
         else:
-            print("train_only=True. Cannot calculate validation sigma. Uncertainty plots will not be available.")
-            self.global_sigma = 0  # Set to 0 to avoid errors
+            self.res_q_low = None
+            self.res_q_high = None
+
+        # if not self.args.train_only:
+        #     # Rerun validation on the best model
+        #     vali_loss, vali_preds, vali_trues = self.vali(vali_data, vali_loader, criterion)
+        #     # Calculate errors (residuals)
+        #     errors = vali_trues - vali_preds
+        #     # Calculate standard deviation of errors
+        #     self.global_sigma = np.std(errors)  # This is the SCALED sigma
+        #     scaled_sigma = self.global_sigma
+        #
+        #     # --- ADDED: Reverscale sigma for logging ---
+        #     real_sigma = 0
+        #     if vali_data.scale:
+        #         try:
+        #             if hasattr(vali_data.scaler, 'min_'):  # MinMaxScaler
+        #                 target_scale = vali_data.scaler.scale_[-1]
+        #                 real_sigma = self.global_sigma / target_scale
+        #             elif hasattr(vali_data.scaler, 'mean_'):  # StandardScaler
+        #                 target_scale = vali_data.scaler.scale_[-1]  # std
+        #                 real_sigma = self.global_sigma * target_scale
+        #         except Exception as e:
+        #             print(f"Warning: could not reverscale global sigma for logging. Error: {e}")
+        #             real_sigma = scaled_sigma  # fallback
+        #     else:
+        #         real_sigma = scaled_sigma  # It's already in real units
+        #
+        #     print(f"Global sigma (std dev of scaled residuals) calculated: {scaled_sigma:.6f}")
+        #     print(f"Global sigma (REVERSCALED) calculated: {real_sigma:.6f}")
+        #     # --- END OF ADDED BLOCK ---
+        #
+        # else:
+        #     print("train_only=True. Cannot calculate validation sigma. Uncertainty plots will not be available.")
+        #     self.global_sigma = 0  # Set to 0 to avoid errors
         # --- END OF NEW BLOCK ---
         return self.model
 
     def test(self, setting, test=0):
         test_data, test_loader = self._get_data(flag='test')
-        
+        train_data, _ = self._get_data(flag='train')
+
         if test:
             print('loading model')
             self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))
 
-        preds = []
-        trues = []
-        inputx = []
-        folder_path = './test_results/' + setting + '/'
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
+        # ---------- folders ----------
+        plot_folder = os.path.join('./test_results/', setting)
+        os.makedirs(plot_folder, exist_ok=True)
 
-        self.model.eval()
-        with torch.no_grad():
-            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
-                batch_x = batch_x.float().to(self.device)
-                batch_y = batch_y.float().to(self.device)
+        save_folder = os.path.join('./results/', setting)
+        os.makedirs(save_folder, exist_ok=True)
 
-                batch_x_mark = batch_x_mark.float().to(self.device)
-                batch_y_mark = batch_y_mark.float().to(self.device)
+        # ---------- 2) STITCH ONLY THE PREDICTIONS ----------
+        # test_target_len = len(test_data.data_x) - seq_len  # e.g. 20
+        # num_windows, _, C = preds.shape
+        #
+        # stitched_pred = np.full((test_target_len, C), np.nan, dtype=float)
+        #
+        # for w in range(num_windows):
+        #     for h in range(pred_len):
+        #         pos = w + h
+        #         if pos < test_target_len and np.isnan(stitched_pred[pos]).all():
+        #             stitched_pred[pos] = preds[w, h]
+        # ==========================
+        # ==========================
+        # NEW: horizon-wise evaluation with extended forecast origins
+        # allow windows whose 4-step prediction goes beyond season end,
+        # but only keep targets within season for evaluation
+        # ==========================
+        # ---------- basic sizes ----------
+        T = len(test_data.data_x)
+        seq_len = self.args.seq_len
+        pred_len = self.args.pred_len
+        C = test_data.data_x.shape[1]  # feature dims (S -> 1)
 
-                # # decoder input
-                # dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-                # dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+        # -------- get full truth in real scale (target incidenza) --------
+        full_truth = test_data.data_x
+        if test_data.scale:
+            full_truth = test_data.inverse_transform(full_truth)
+        full_truth_1d = full_truth[:, -1]  # target column (incidenza)
 
-                # decoder input
-                if self.args.loss == 'quantile':
-                    # For quantile loss, we must expand the decoder input to match dec_in (which is 21)
-                    num_quantiles = len(self.args.quantiles)  # e.g., 3
+        # use full dates for plotting
+        dates_window = test_data.dates.values  # length = T
+        alpha = 0.2  # 80% interval
 
-                    # 1. Create the "zero" part with the correct quantile dimension
-                    # Use dec_in here, which you set to 21 in the script
-                    zeros_shape = (batch_y.shape[0], self.args.pred_len, self.args.dec_in)
-                    dec_inp_zeros = torch.zeros(zeros_shape).float().to(self.device)
+        # helper: build one model forward for a given start index s
+        def forward_one_window(s):
+            # encoder input
+            end = s + seq_len
 
-                    # 2. Create the "label" part by repeating the ground truth for each quantile
-                    label_part = batch_y[:, :self.args.label_len, :]  # Shape: (batch, label_len, 7)
+            if self.args.model == 'ARIMA':
+                # Use within-season history for ARIMA (proper ARIMA), not only seq_len points.
+                known0 = 4
+                obs_end = min(known0 + s, len(test_data.data_x))  # test 已知到哪（最多到 season 末尾）
 
-                    # Repeat tensor 'num_quantiles' times along the last dimension
-                    # Shape becomes (batch, label_len, 7 * 3) = (batch, label_len, 21)
-                    dec_inp_label = label_part.repeat(1, 1, num_quantiles)
+                # 1) 拼历史值
+                x_enc = np.vstack([train_data.data_x, test_data.data_x[:obs_end]])  # (L_hist, C)
 
-                    # 3. Concatenate them
-                    dec_inp = torch.cat([dec_inp_label, dec_inp_zeros], dim=1).float().to(self.device)
+                # 2) 拼对应时间特征（和 x_enc 完全同长度）
+                x_mark = np.vstack([train_data.data_stamp, test_data.data_stamp[:obs_end]])  # (L_hist, mark_dim)
 
+            else:
+                # other models keep strict short window
+                x_enc = test_data.data_x[s:end]  # scaled, length = seq_len
+                x_mark = test_data.data_stamp[s:end]
+            # decoder marks need label_len+pred_len
+            r_begin = s + seq_len - self.args.label_len
+            r_end = r_begin + self.args.label_len + pred_len
+
+            # 如果 r_end 超过 T（越界），我们就用最后一个 stamp 继续“复制”时间特征（简化）
+            # 更严谨是按 weekly dates 外推再算 time_features，但复制在你的 timeF embedding 下通常也能跑通。
+            if r_end <= len(test_data.data_stamp):
+                y_mark = test_data.data_stamp[r_begin:r_end]
+            else:
+                y_mark = np.zeros((self.args.label_len + pred_len, test_data.data_stamp.shape[1]), dtype=float)
+                # 前面 label_len 用真实 stamp
+                y_mark[:self.args.label_len] = test_data.data_stamp[r_begin: r_begin + self.args.label_len]
+                # 未来 pred_len 简单复制最后一行 stamp（够你先跑通逻辑）
+                y_mark[self.args.label_len:] = test_data.data_stamp[-1]
+
+            # decoder input: label part 用真实 y（scaled），未来 pred_len 用 0
+            y_true_part = test_data.data_x[r_begin:r_begin + self.args.label_len]
+            dec_zeros = np.zeros((pred_len, C), dtype=float)
+            dec_inp = np.concatenate([y_true_part, dec_zeros], axis=0)
+
+            # to torch
+            batch_x = torch.from_numpy(x_enc).float().unsqueeze(0).to(self.device)  # (1, seq_len, C)
+            batch_x_mark = torch.from_numpy(x_mark).float().unsqueeze(0).to(self.device)  # (1, seq_len, mark_dim)
+            dec_inp_t = torch.from_numpy(dec_inp).float().unsqueeze(0).to(self.device)  # (1, label+pred, C)
+            batch_y_mark = torch.from_numpy(y_mark).float().unsqueeze(0).to(self.device)  # (1, label+pred, mark_dim)
+
+            with torch.no_grad():
+                if 'Linear' in self.args.model:
+                    out = self.model(batch_x)
                 else:
-                    # Original logic
-                    dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-                    dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+                    out = self.model(batch_x, batch_x_mark, dec_inp_t, batch_y_mark)
+                    if self.args.output_attention:
+                        out = out[0]
 
-                # encoder - decoder
-                if self.args.use_amp:
-                    with torch.cuda.amp.autocast():
-                        if 'Linear' in self.args.model:
-                            outputs = self.model(batch_x)
-                        else:
-                            if self.args.output_attention:
-                                outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
-                            else:
-                                outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
-                else:
-                    if 'Linear' in self.args.model:
-                            outputs = self.model(batch_x)
-                    else:
-                        if self.args.output_attention:
-                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
+            # slice last pred_len
+            f_dim = -1 if self.args.features == 'MS' else 0
+            out = out[:, -pred_len:, f_dim:]  # (1, pred_len, C')
+            out_np = out.detach().cpu().numpy()[0]  # (pred_len, C')
 
-                        else:
-                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+            # ---- ARIMA CI hook: grab model-produced CI (same window) ----
+            use_arima_ci = (self.args.model == 'ARIMA') and hasattr(self.model, "last_lower") and (
+                        self.model.last_lower is not None)
+            if use_arima_ci:
+                # last_lower/upper were set inside ARIMA forward()
+                lower_np = self.model.last_lower  # expected (B, pred_len, C)
+                upper_np = self.model.last_upper
 
-                f_dim = -1 if self.args.features == 'MS' else 0
-                # print(outputs.shape,batch_y.shape)
-                if self.args.loss == 'quantile' and self.args.features == 'MS':
-                    # We need the quantiles for the *target* feature only.
-                    # Since target is the last feature, we take the last num_quantiles channels.
-                    num_quantiles = len(self.args.quantiles)
-                    outputs = outputs[:, -self.args.pred_len:, -num_quantiles:]  # Shape (batch, pred_len, 3)
-                else:
-                    outputs = outputs[:, -self.args.pred_len:, f_dim:]
-                batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
-                outputs = outputs.detach().cpu().numpy()
-                batch_y = batch_y.detach().cpu().numpy()
+                # keep consistent slice and batch index 0
+                # (ARIMA forward already outputs pred_len, but we slice defensively)
+                lower_np = lower_np[0, -pred_len:, :]
+                upper_np = upper_np[0, -pred_len:, :]
+            else:
+                lower_np, upper_np = None, None
 
-                pred = outputs  # outputs.detach().cpu().numpy()  # .squeeze()
-                true = batch_y  # batch_y.detach().cpu().numpy()  # .squeeze()
+            return out_np, lower_np, upper_np
 
-                preds.append(pred)
-                trues.append(true)
-                inputx.append(batch_x.detach().cpu().numpy())
-                # if i % 20 == 0:
-                #     input = batch_x.detach().cpu().numpy()
-                #     gt = np.concatenate((input[0, :, -1], true[0, :, -1]), axis=0)
-                #     pd = np.concatenate((input[0, :, -1], pred[0, :, -1]), axis=0)
-                #     visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
-                # NEW CODE for test() method
-                if i % 20 == 0:
-                    input = batch_x.detach().cpu().numpy()
-                    # Get ground truth for the last feature (e.g., incidenza)
-                    gt = np.concatenate((input[0, :, -1], true[0, :, -1]), axis=0)
-                    seq_len = self.args.seq_len
+        # -------- per-horizon evaluation --------
+        results_by_h = {}
 
-                    # --- Reverscaling Helper Logic ---
-                    target_scale_val = None
-                    target_min_or_mean = None
-                    real_sigma = 0
-                    scaler_type = None
+        for h in range(pred_len):  # h=0..3 => 1..4-step
+            step = h + 1
+            preds_h = []
+            trues_h = []
+            idx_h = []  # global time indices of targets
+            arima_low_h = []  # NEW
+            arima_up_h = []  # NEW
 
-                    if self.global_sigma is None:
-                        print("Warning: self.global_sigma not calculated. Run training first (is_training=1).")
-                        self.global_sigma = 0
+            # start index s: allow up to T-seq_len (not restricted by pred_len)
+            for s in range(0, T - seq_len + 1):
+                out, arima_low, arima_up = forward_one_window(s)
 
+                target_global_idx = s + seq_len + h  # the time index we evaluate
+                if target_global_idx >= T:
+                    continue  # beyond season end -> do not evaluate
+
+                # pick only horizon h
+                pred_scaled = out[h, -1]  # target feature
+                true_real = full_truth_1d[target_global_idx]
+
+                preds_h.append(pred_scaled)
+                trues_h.append(true_real)
+                idx_h.append(target_global_idx)
+                # NEW: store ARIMA CI (scaled) if available
+                if self.args.model == 'ARIMA' and arima_low is not None:
+                    arima_low_h.append(arima_low[h, -1])
+                    arima_up_h.append(arima_up[h, -1])
+
+            preds_h = np.array(preds_h, dtype=float)
+            trues_h = np.array(trues_h, dtype=float)
+            arima_low_h = np.array(arima_low_h, dtype=float) if len(arima_low_h) > 0 else None
+            arima_up_h = np.array(arima_up_h, dtype=float) if len(arima_up_h) > 0 else None
+
+            # inverse scale preds if needed (only for target)
+            if test_data.scale:
+                try:
+                    if hasattr(test_data.scaler, 'min_'):
+                        target_scale = test_data.scaler.scale_[-1]
+                        target_min = test_data.scaler.min_[-1]
+                        preds_h = (preds_h / target_scale) + target_min
+                    elif hasattr(test_data.scaler, 'mean_'):
+                        target_scale = test_data.scaler.scale_[-1]
+                        target_mean = test_data.scaler.mean_[-1]
+                        preds_h = (preds_h * target_scale) + target_mean
+                except Exception as e:
+                    print(f"Warning: could not reverscale preds_h. Error: {e}")
+
+                # ---- choose CI source ----
+                if self.args.model == 'ARIMA' and (arima_low_h is not None) and (arima_up_h is not None):
+                    # ARIMA CI also needs inverse scaling (same as preds_h)
                     if test_data.scale:
                         try:
-                            if hasattr(test_data.scaler, 'min_'):  # MinMaxScaler
-                                scaler_type = 'minmax'
-                                target_scale_val = test_data.scaler.scale_[-1]
-                                target_min_or_mean = test_data.scaler.min_[-1]
-                                real_sigma = self.global_sigma / target_scale_val
-                                gt = (gt / target_scale_val) + target_min_or_mean
-
-                            elif hasattr(test_data.scaler, 'mean_'):  # StandardScaler
-                                scaler_type = 'standard'
-                                target_scale_val = test_data.scaler.scale_[-1]  # std
-                                target_min_or_mean = test_data.scaler.mean_[-1]  # mean
-                                real_sigma = self.global_sigma * target_scale_val
-                                gt = (gt * target_scale_val) + target_min_or_mean
+                            if hasattr(test_data.scaler, 'min_'):
+                                target_scale = test_data.scaler.scale_[-1]
+                                target_min = test_data.scaler.min_[-1]
+                                arima_low_h = (arima_low_h / target_scale) + target_min
+                                arima_up_h = (arima_up_h / target_scale) + target_min
+                            elif hasattr(test_data.scaler, 'mean_'):
+                                target_scale = test_data.scaler.scale_[-1]
+                                target_mean = test_data.scaler.mean_[-1]
+                                arima_low_h = (arima_low_h * target_scale) + target_mean
+                                arima_up_h = (arima_up_h * target_scale) + target_mean
                         except Exception as e:
-                            print(f"Plotting: Could not get scaler params. Error: {e}")
-                    else:
-                        real_sigma = self.global_sigma
-                    # --- END OF REVERSCALING LOGIC ---
+                            print(f"Warning: could not reverscale ARIMA CI. Error: {e}")
 
-                    if self.args.loss == 'quantile':
-                        # --- Quantile Plotting Logic ---
-                        # ... (This logic is fine, but you should run with MSE) ...
-                        # ... (Make sure to reverscale pd_lower_full etc. if you use this) ...
-                        print("Error: Plotting in quantile mode. Please use --loss mse to test Method 1.")
+                    lower_h = arima_low_h
+                    upper_h = arima_up_h
+                else:
+                    # your existing residual-quantile CI
+                    lower_h = preds_h + float(self.res_q_low[h])
+                    upper_h = preds_h + float(self.res_q_high[h])
 
-                    else:
-                        # --- Standard (Non-Quantile) Logic ---
-                        pd = np.concatenate((input[0, :, -1], pred[0, :, -1]), axis=0)
+            # else:
+            #     real_sigma = self.global_sigma if self.global_sigma is not None else 0.0
+            #     if test_data.scale:
+            #         try:
+            #             if hasattr(test_data.scaler, 'min_'):
+            #                 real_sigma = real_sigma / test_data.scaler.scale_[-1]
+            #             elif hasattr(test_data.scaler, 'mean_'):
+            #                 real_sigma = real_sigma * test_data.scaler.scale_[-1]
+            #         except Exception as e:
+            #             print(f"Warning: could not reverscale sigma. Error: {e}")
+            #     lower_h = preds_h - 1.2816 * real_sigma
+            #     upper_h = preds_h + 1.2816 * real_sigma
 
-                        # --- Reverscale Standard Plot ---
-                        if test_data.scale and scaler_type:
-                            if scaler_type == 'minmax':
-                                pd = (pd / target_scale_val) + target_min_or_mean
-                            elif scaler_type == 'standard':
-                                pd = (pd * target_scale_val) + target_min_or_mean
+            lower_h = np.clip(lower_h, a_min=0, a_max=None)
+            # ---- NEW: per-point WIS (80% interval), for boxplots ----
+            # WIS_alpha(l,u,y) = (u-l) + (2/alpha)*(l-y)*1[y<l] + (2/alpha)*(y-u)*1[y>u]
+            width = upper_h - lower_h
+            under = np.maximum(lower_h - trues_h, 0.0)
+            over = np.maximum(trues_h - upper_h, 0.0)
+            wis80_point = width + (2.0 / alpha) * (under + over)  # shape [N]
+            np.save(os.path.join(save_folder, f"wis80_point_step{step}.npy"), wis80_point)
 
-                        # --- Create Uncertainty Bands ---
-                        lower_band = pd - 1.96 * real_sigma
-                        upper_band = pd + 1.96 * real_sigma
+            picp80 = PICP(lower_h, upper_h, trues_h)
+            wis80 = mean_WIS_interval(lower_h, upper_h, trues_h, alpha)
 
-                        # Clip lower bound at 0
-                        lower_band = np.clip(lower_band, a_min=0, a_max=None)
+            from utils.metrics import metric
+            point_metrics = metric(preds_h.reshape(1, -1, 1), trues_h.reshape(1, -1, 1))
 
-                        visual(true=gt,
-                               preds=pd,
-                               path=os.path.join(folder_path, str(i) + '.pdf'),
-                               lower=lower_band,
-                               upper=upper_band,
-                               seq_len=seq_len)
-        if self.args.test_flop:
-            test_params_flop((batch_x.shape[1],batch_x.shape[2]))
-            exit()
-            
-        preds = np.concatenate(preds, axis=0)
-        trues = np.concatenate(trues, axis=0)
-        inputx = np.concatenate(inputx, axis=0)
+            print(f"\n===== {h + 1}-step (save only step {h + 1}) =====")
+            print("PICP (80% interval):", picp80)
+            print("Mean WIS (80% interval):", wis80)
+            print("Point metrics:", point_metrics)
 
-        # result save
-        folder_path = './results/' + setting + '/'
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
+            # -------- plot: put predictions back to full timeline --------
+            pred_plot = np.full(T, np.nan, dtype=float)
+            lower_plot = np.full(T, np.nan, dtype=float)
+            upper_plot = np.full(T, np.nan, dtype=float)
 
-        # --- NEW BLOCK TO REVERSCALE METRICS ---
-        if test_data.scale:
-            print("Reverscaling preds and trues for metrics calculation...")
-            try:
-                if hasattr(test_data.scaler, 'min_'):  # MinMaxScaler
-                    target_scale = test_data.scaler.scale_[-1]
-                    target_min = test_data.scaler.min_[-1]
-                    preds = (preds / target_scale) + target_min
-                    trues = (trues / target_scale) + target_min
-                elif hasattr(test_data.scaler, 'mean_'):  # StandardScaler
-                    target_scale = test_data.scaler.scale_[-1]  # std
-                    target_mean = test_data.scaler.mean_[-1]  # mean
-                    preds = (preds * target_scale) + target_mean
-                    trues = (trues * target_scale) + target_mean
-            except Exception as e:
-                print(f"Warning: could not reverscale metrics. Error: {e}")
-        else:
-            print("Metrics are already on original data scale (no scaling was applied).")
-        # --- END OF NEW BLOCK ---
+            for j, gidx in enumerate(idx_h):
+                pred_plot[gidx] = preds_h[j]
+                lower_plot[gidx] = lower_h[j]
+                upper_plot[gidx] = upper_h[j]
 
-        # mae, mse, rmse, mape, mspe, rse, corr = metric(preds, trues)
-        # print('mse:{}, mae:{}'.format(mse, mae))
-        from utils.metrics import metric
+            import pandas as pds
+            gt_s = pds.Series(full_truth_1d, index=dates_window)
+            pred_s = pds.Series(pred_plot, index=dates_window)
+            lower_s = pds.Series(lower_plot, index=dates_window)
+            upper_s = pds.Series(upper_plot, index=dates_window)
 
-        if self.args.loss == 'quantile':
-            results = metric(preds, trues, quantiles=self.args.quantiles)
-        else:
-            results = metric(preds, trues)
+            visual(true=gt_s,
+                   preds=pred_s,
+                   path=os.path.join(plot_folder, f"rolling_test_step{h + 1}.png"),
+                   lower=lower_s,
+                   upper=upper_s,
+                   seq_len=seq_len)
 
-        print(results)
+            # ---- SAVE per-step npy ----
+            np.save(os.path.join(save_folder, f"pred_step{step}.npy"), preds_h)
+            np.save(os.path.join(save_folder, f"true_step{step}.npy"), trues_h)
+            np.save(os.path.join(save_folder, f"lower80_step{step}.npy"), lower_h)
+            np.save(os.path.join(save_folder, f"upper80_step{step}.npy"), upper_h)
+            np.save(os.path.join(save_folder, f"idx_step{step}.npy"), np.array(idx_h, dtype=int))
 
-        f = open("result.txt", 'a')
-        f.write(setting + "  \n")
-        # f.write('mse:{}, mae:{}, rse:{}, corr:{}'.format(mse, mae, rse, corr))
-        # f.write('\n')
-        # f.write('\n')
-        if isinstance(results, dict):
-            for k, v in results.items():
-                f.write(f"{k}: {v:.6f}  ")
-        else:
-            # backward compatibility if results is a tuple
-            mae, mse, rmse, mape, mspe, rse, corr = results
-            f.write(f"mse:{mse:.6f}, mae:{mae:.6f}, rse:{rse:.6f}, corr:{corr:.6f}")
+            # ---- SAVE per-step CSV (date-aligned, NaN elsewhere) ----
+            df_step = pd.DataFrame({
+                "date": pd.to_datetime(dates_window),
+                "true": full_truth_1d,
+                f"pred_step{step}": pred_plot,
+                f"lower80_step{step}": lower_plot,
+                f"upper80_step{step}": upper_plot,
+            })
+            df_step.to_csv(os.path.join(save_folder, f"rolling_pred_step{step}.csv"), index=False)
 
-        f.write('\n\n')
-        f.close()
+            # ---- SAVE metrics line (append) ----
+            metrics_line = {
+                "step": step,
+                "PICP80": float(picp80),
+                "WIS80": float(wis80),
+                **{k: float(v) for k, v in point_metrics.items()}
+            }
+            with open(os.path.join(save_folder, "metrics_by_step.txt"), "a", encoding="utf-8") as f:
+                f.write(setting + "  " + "  ".join([f"{k}:{v:.6f}" for k, v in metrics_line.items()]) + "\n")
 
-        # np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe,rse, corr]))
-        np.save(folder_path + 'pred.npy', preds)
-        # np.save(folder_path + 'true.npy', trues)
-        # np.save(folder_path + 'x.npy', inputx)
+            results_by_h[step] = metrics_line
+
         return
+
+
+
 
     # def predict(self, setting, load=False):
     #     pred_data, pred_loader = self._get_data(flag='pred')

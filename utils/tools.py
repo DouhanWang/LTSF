@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+import pandas as pd
+
 import time
 
 plt.switch_backend('agg')
@@ -93,41 +95,178 @@ class StandardScaler():
 #     plt.savefig(name, bbox_inches='tight')
 
 
+# def visual(true, preds, path, lower=None, upper=None, seq_len=None):
+#     plt.figure(figsize=(10, 6))
+#
+#     # --- Find the prediction start index ---
+#     if seq_len is None:
+#         # Fallback if seq_len is not provided
+#         pred_start_idx = len(true) // 2
+#     else:
+#         pred_start_idx = seq_len  # This is the correct history length (e.g., 4)
+#
+#     # --- Plot the main lines ---
+#     plt.plot(true, label='GroundTruth', color='black')
+#     plt.plot(preds, label='Prediction (Median)', color='blue')
+#
+#     # --- Plot the uncertainty band ---
+#     if lower is not None and upper is not None:
+#         plt.fill_between(
+#             x=range(pred_start_idx, len(true)),  # X-axis range (e.g., from 4 to 8)
+#             y1=lower[pred_start_idx:],  # Lower bound
+#             y2=upper[pred_start_idx:],  # Upper bound
+#             color='lightblue',
+#             alpha=0.5,
+#             label='95% Prediction Interval'
+#         )
+#
+#
+#     plt.axvline(x=pred_start_idx - 1, color='red', linestyle='--', label='Forecast Start')
+#
+#     # --- 2. Add Axis Labels ---
+#     plt.xlabel('Time Step')
+#     plt.ylabel('Incidenza')
+#
+#     plt.legend()
+#     plt.savefig(path)
+#     plt.close()
+
 def visual(true, preds, path, lower=None, upper=None, seq_len=None):
+    """
+    SAME calling as before.
+    If true/preds/lower/upper are pandas Series with DatetimeIndex,
+    x-axis will be exact dates; otherwise fallback to 0,1,2,...
+    Produces dots + per-dot uncertainty bars.
+    """
+
+    # ---- helper to get x-axis ----
+    def extract_x(x):
+        if isinstance(x, pd.Series):
+            if isinstance(x.index, pd.DatetimeIndex):
+                return x.index.to_pydatetime()
+        return None
+
+    x_dates = extract_x(true)
+    if x_dates is None:
+        x_dates = extract_x(preds)
+    if x_dates is None and lower is not None:
+        x_dates = extract_x(lower)
+    if x_dates is None and upper is not None:
+        x_dates = extract_x(upper)
+
+    # ---- values ----
+    def to_vals(x):
+        if isinstance(x, pd.Series):
+            return x.values.astype(float)
+        return np.asarray(x, dtype=float)
+
+    true_vals = to_vals(true)
+    pred_vals = to_vals(preds)
+    lower_vals = to_vals(lower) if lower is not None else None
+    upper_vals = to_vals(upper) if upper is not None else None
+
+    n_true = len(true_vals)
+
+    # ---- forecast start ----
+    pred_start_idx = (n_true // 2) if seq_len is None else seq_len
+
+    # ---- x axis ----
+    if x_dates is None:
+        x_true = np.arange(n_true)
+    else:
+        x_true = np.asarray(x_dates)
+        try:
+            x_dt = pd.to_datetime(x_true)
+            if len(x_dt) >= 2:
+                diffs = (x_dt[1:] - x_dt[:-1])
+                step = pd.Series(diffs).mode().iloc[0]   # most common timedelta
+                if not (diffs == step).all():
+                    regular_range = pd.date_range(
+                        start=x_dt[0], periods=n_true, freq=step
+                    )
+                    x_true = regular_range.to_pydatetime()
+        except Exception:
+            # if anything goes wrong, just fall back to the raw dates
+            x_true = np.asarray(x_dates)
+    # ---- align preds/bounds to future ----
+    if len(pred_vals) == n_true:
+        x_pred = x_true[pred_start_idx:]
+        y_pred = pred_vals[pred_start_idx:]
+        if lower_vals is not None and upper_vals is not None:
+            lower_vals = lower_vals[pred_start_idx:]
+            upper_vals = upper_vals[pred_start_idx:]
+    else:
+        x_pred = x_true[pred_start_idx: pred_start_idx + len(pred_vals)]
+        y_pred = pred_vals
+
+    # ---- plot ----
     plt.figure(figsize=(10, 6))
 
-    # --- Find the prediction start index ---
-    if seq_len is None:
-        # Fallback if seq_len is not provided
-        pred_start_idx = len(true) // 2
-    else:
-        pred_start_idx = seq_len  # This is the correct history length (e.g., 4)
+    # history truth as dots
+    plt.plot(
+        x_true, #[:pred_start_idx]
+        true_vals, #[:pred_start_idx]
+        "o",
+        color="blue",
+        label="Ground Truth",
+    )
 
-    # --- Plot the main lines ---
-    plt.plot(true, label='GroundTruth', color='black')
-    plt.plot(preds, label='Prediction (Median)', color='blue')
+    # predictions as dots
+    plt.scatter(
+        x_pred,
+        y_pred,
+        color="red",
+        label="Prediction",
+    )
 
-    # --- Plot the uncertainty band ---
-    if lower is not None and upper is not None:
-        plt.fill_between(
-            x=range(pred_start_idx, len(true)),  # X-axis range (e.g., from 4 to 8)
-            y1=lower[pred_start_idx:],  # Lower bound
-            y2=upper[pred_start_idx:],  # Upper bound
-            color='lightblue',
-            alpha=0.5,
-            label='95% Prediction Interval'
+    # uncertainty bars
+    if lower_vals is not None and upper_vals is not None:
+        # ensure bounds are consistent with the mean (no crossing)
+        lower_vals = np.minimum(lower_vals, y_pred)
+        upper_vals = np.maximum(upper_vals, y_pred)
+
+        yerr_low = y_pred - lower_vals
+        yerr_high = upper_vals - y_pred
+
+        # numeric safety: clip to non-negative
+        yerr_low = np.clip(yerr_low, 0, None)
+        yerr_high = np.clip(yerr_high, 0, None)
+
+        yerr = [yerr_low, yerr_high]
+
+        plt.errorbar(
+            x_pred,
+            y_pred,
+            yerr=yerr,
+            fmt="none",
+            alpha=0.3,
+            color="red",
+            label="Prediction Interval",
         )
 
+    # split line at last history date
+    split_x = x_true[pred_start_idx - 1]
+    plt.axvline(split_x, color="red", linestyle="--", label="Prediction Split")
 
-    plt.axvline(x=pred_start_idx - 1, color='red', linestyle='--', label='Forecast Start')
-
-    # --- 2. Add Axis Labels ---
-    plt.xlabel('Time Step')
-    plt.ylabel('Incidenza')
-
+    # plt.title("Italy ILI Incidence Forecast (dot plot with uncertainty)")
+    plt.xlabel("Date" if x_dates is not None else "Time Step")
+    plt.ylabel("Incidenza")
+    plt.grid(True)
     plt.legend()
-    plt.savefig(path)
+    plt.tight_layout()
+    # if x_dates is not None:
+    #     plt.gcf().autofmt_xdate()
+    if x_dates is not None:
+        ax = plt.gca()
+        ax.set_xticks(x_true)  # put ticks exactly at your data dates
+        ax.set_xticklabels(
+            [pd.to_datetime(d).strftime("%Y-%m-%d") for d in x_true],
+            rotation=45, ha="right"
+        )
+
+    plt.savefig(path, dpi=300, bbox_inches="tight")
     plt.close()
+
 def test_params_flop(model,x_shape):
     """
     If you want to thest former's flop, you need to give default value to inputs in model.forward(), the following code can only pass one argument to forward()

@@ -38,6 +38,22 @@ def PICP(pred_lower, pred_upper, true):
 def PINAW(pred_lower, pred_upper, true):
     """Prediction Interval Normalized Average Width"""
     return np.mean(pred_upper - pred_lower) / (np.max(true) - np.min(true))
+def WMAPE(pred, true):
+    """Weighted MAPE: sum|err| / sum|true|"""
+    num = np.sum(np.abs(true - pred))
+    den = np.sum(np.abs(true))
+    return num / den if den != 0 else np.nan
+
+def mean_WIS_interval(pred_lower, pred_upper, true, alpha):
+    """
+    pred_lower, pred_upper, true: arrays with same shape (T,) or (T,C)
+    alpha: e.g. 0.05 for 95% interval
+    """
+    width = pred_upper - pred_lower
+    below = (true < pred_lower) * (pred_lower - true)
+    above = (true > pred_upper) * (true - pred_upper)
+    is_alpha = width + (2.0 / alpha) * below + (2.0 / alpha) * above
+    return np.mean(is_alpha)
 
 # def metric(pred, true):
 #     mae = MAE(pred, true)
@@ -99,8 +115,7 @@ def metric(pred, true, quantiles=None):
     mape = MAPE(pred_median, true)
     mspe = MSPE(pred_median, true)
     rse = RSE(pred_median, true)
-    corr = CORR(pred_median, true)
-
+    wmape = WMAPE(pred_median, true)
     results = {
         'MAE': mae,
         'MSE': mse,
@@ -108,13 +123,20 @@ def metric(pred, true, quantiles=None):
         'MAPE': mape,
         'MSPE': mspe,
         'RSE': rse,
-        'CORR': corr,
+        'WMAPE': wmape,
     }
 
-    # --- Add coverage metrics if quantiles exist ---
-    if pred_reshaped is not None:
-        picp = PICP(lower_bound, upper_bound, true)
-        pinaw = PINAW(lower_bound, upper_bound, true)
-        results.update({'PICP': picp, 'PINAW': pinaw})
+    # # --- Add coverage metrics if quantiles exist ---
+    # if pred_reshaped is not None:
+    #     picp = PICP(lower_bound, upper_bound, true)
+    #     pinaw = PINAW(lower_bound, upper_bound, true)
+    #     results.update({'PICP': picp, 'PINAW': pinaw})
+    #     wis = mean_WIS(pred_reshaped, true, quantiles)
+    #
+    #     results.update({
+    #         'PICP': picp,
+    #         'PINAW': pinaw,
+    #         'WIS': wis,  # mean WIS
+    #     })
 
     return results

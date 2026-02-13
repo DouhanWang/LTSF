@@ -299,3 +299,421 @@ MAE: 2.449828  MSE: 8.962324  RMSE: 2.993714  MAPE: 0.574073  MSPE: 0.515505  RS
 italy_ili_MS_incidenza_uncertainty_4_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
 MAE: 2.791254  MSE: 8.643054  RMSE: 2.939907  MAPE: 0.664260  MSPE: 0.529676  RSE: 3.216831  CORR: 0.000000  
 
+italy_ili_MS_uncertainty_4_4_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.247029  MSE: 2.367636  RMSE: 1.538712  MAPE: 0.333913  MSPE: 0.198165  RSE: 1.683651  CORR: 0.000000  
+
+italy_ili_MS_uncertainty_6_4_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.246391  MSE: 3.025246  RMSE: 1.739323  MAPE: 0.351589  MSPE: 0.286615  RSE: 1.903158  CORR: 0.000000  
+
+italy_ili_MS_uncertainty_8_4_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.159113  MSE: 2.683263  RMSE: 1.638067  MAPE: 0.328299  MSPE: 0.242763  RSE: 1.792364  CORR: 0.000000  
+
+italy_ili_MS_uncertainty_4_4_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.247029  MSE: 2.367636  RMSE: 1.538712  MAPE: 0.333913  MSPE: 0.198165  RSE: 1.683651  CORR: 0.000000  
+
+italy_ili_MS_uncertainty_6_4_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.246391  MSE: 3.025246  RMSE: 1.739323  MAPE: 0.351589  MSPE: 0.286615  RSE: 1.903158  CORR: 0.000000  
+
+italy_ili_MS_uncertainty_4_4_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.247029  MSE: 2.367636  RMSE: 1.538712  MAPE: 0.333913  MSPE: 0.198165  RSE: 1.683651  CORR: 0.000000  
+
+italy_ili_MS_uncertainty_6_4_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.246391  MSE: 3.025246  RMSE: 1.739323  MAPE: 0.351589  MSPE: 0.286615  RSE: 1.903158  CORR: 0.000000  
+
+italy_ili_MS_uncertainty_8_4_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.159113  MSE: 2.683263  RMSE: 1.638067  MAPE: 0.328299  MSPE: 0.242763  RSE: 1.792364  CORR: 0.000000  
+
+italy_ili_MS_uncertainty_4_4_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.247029  MSE: 2.367636  RMSE: 1.538712  MAPE: 0.333913  MSPE: 0.198165  RSE: 1.683651  CORR: 0.000000  
+
+italy_ili_MS_uncertainty_6_4_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.246391  MSE: 3.025246  RMSE: 1.739323  MAPE: 0.351589  MSPE: 0.286615  RSE: 1.903158  CORR: 0.000000  
+
+italy_ili_MS_uncertainty_8_4_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.159113  MSE: 2.683263  RMSE: 1.638067  MAPE: 0.328299  MSPE: 0.242763  RSE: 1.792364  CORR: 0.000000  
+
+italy_ili_MS_uncertainty_4_4_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.247029  MSE: 2.367636  RMSE: 1.538712  MAPE: 0.333913  MSPE: 0.198165  RSE: 1.683651  CORR: 0.000000  
+
+italy_ili_MS_uncertainty_6_4_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.246391  MSE: 3.025246  RMSE: 1.739323  MAPE: 0.351589  MSPE: 0.286615  RSE: 1.903158  CORR: 0.000000  
+
+italy_ili_MS_uncertainty_8_4_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.159113  MSE: 2.683263  RMSE: 1.638067  MAPE: 0.328299  MSPE: 0.242763  RSE: 1.792364  CORR: 0.000000  
+
+italy_ili_MS_uncertainty_4_4_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.589755  MSE: 6.582869  RMSE: 2.565710  MAPE: 0.135451  MSPE: 0.036108  RSE: 0.655699  CORR: 0.029718  
+
+italy_ili_MS_uncertainty_6_4_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.149526  MSE: 9.499769  RMSE: 3.082169  MAPE: 0.190953  MSPE: 0.060890  RSE: 0.787686  CORR: 0.030639  
+
+italy_ili_MS_uncertainty_8_4_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.118145  MSE: 9.741381  RMSE: 3.121119  MAPE: 0.186555  MSPE: 0.060847  RSE: 0.797640  CORR: 0.030246  
+
+italy_ili_MS_uncertainty_4_4_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.589755  MSE: 6.582869  RMSE: 2.565710  MAPE: 0.135451  MSPE: 0.036108  RSE: 0.655699  CORR: 0.029718  WMAPE: 0.147061  
+
+italy_ili_MS_uncertainty_6_4_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.149526  MSE: 9.499769  RMSE: 3.082169  MAPE: 0.190953  MSPE: 0.060890  RSE: 0.787686  CORR: 0.030639  WMAPE: 0.198843  
+
+italy_ili_MS_uncertainty_8_4_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.118145  MSE: 9.741381  RMSE: 3.121119  MAPE: 0.186555  MSPE: 0.060847  RSE: 0.797640  CORR: 0.030246  WMAPE: 0.195940  
+
+italy_ili_MS_uncertainty_4_4_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 24.100681  MSE: 1512.911729  RMSE: 38.896166  MAPE: 0.135485  MSPE: 0.036125  RSE: 0.655699  CORR: 0.029718  WMAPE: 0.147094  
+
+italy_ili_MS_uncertainty_6_4_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 32.586809  MSE: 2183.290013  RMSE: 46.725689  MAPE: 0.191002  MSPE: 0.060921  RSE: 0.787686  CORR: 0.030639  WMAPE: 0.198888  
+
+italy_ili_MS_uncertainty_8_4_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 32.111073  MSE: 2238.818802  RMSE: 47.316158  MAPE: 0.186603  MSPE: 0.060877  RSE: 0.797640  CORR: 0.030246  WMAPE: 0.195984  
+
+italy_ili_MS_uncertainty_4_4_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.911066  MSE: 15.109184  RMSE: 3.887053  MAPE: 0.245867  MSPE: 0.079061  RSE: 0.959909  CORR: 0.000000  WMAPE: 0.269221  
+
+italy_ili_MS_uncertainty_6_4_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 4.097479  MSE: 23.693962  RMSE: 4.867644  MAPE: 0.371007  MSPE: 0.161132  RSE: 1.202066  CORR: 0.000000  WMAPE: 0.378943  
+
+italy_ili_MS_uncertainty_8_4_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 4.224028  MSE: 24.726428  RMSE: 4.972568  MAPE: 0.378691  MSPE: 0.162072  RSE: 1.227977  CORR: 0.000000  WMAPE: 0.390647  
+
+italy_ili_MS_uncertainty_4_4_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.911066  MSE: 15.109184  RMSE: 3.887053  MAPE: 0.245867  MSPE: 0.079061  RSE: 0.959909  CORR: 0.000000  WMAPE: 0.269221  
+
+italy_ili_MS_uncertainty_6_4_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 4.097479  MSE: 23.693962  RMSE: 4.867644  MAPE: 0.371007  MSPE: 0.161132  RSE: 1.202066  CORR: 0.000000  WMAPE: 0.378943  
+
+italy_ili_MS_uncertainty_8_4_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 4.224028  MSE: 24.726428  RMSE: 4.972568  MAPE: 0.378691  MSPE: 0.162072  RSE: 1.227977  CORR: 0.000000  WMAPE: 0.390647  
+
+italy_ili_MS_incidenza_uncertainty_4_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 5.323101  MSE: 41.563096  RMSE: 6.446945  MAPE: 0.608053  MSPE: 0.603776  RSE: 1.592075  CORR: 0.000000  WMAPE: 0.492291  
+
+italy_ili_MS_incidenza_uncertainty_4_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 4.573984  MSE: 34.120546  RMSE: 5.841280  MAPE: 0.465165  MSPE: 0.449208  RSE: 1.442505  CORR: 0.000000  WMAPE: 0.423011  
+
+italy_ili_MS_incidenza_uncertainty_4_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 5.821699  MSE: 45.040218  RMSE: 6.711201  MAPE: 0.640844  MSPE: 0.644094  RSE: 1.657333  CORR: 0.000000  WMAPE: 0.538402  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_4_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 3.239725  MSE: 15.990055  RMSE: 3.998757  MAPE: 0.347010  MSPE: 0.205633  RSE: 0.987494  CORR: 0.000000  WMAPE: 0.299616  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_4_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 4.401048  MSE: 26.166201  RMSE: 5.115291  MAPE: 0.522742  MSPE: 0.467562  RSE: 1.263222  CORR: 0.000000  WMAPE: 0.407018  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_4_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 3.269697  MSE: 15.661318  RMSE: 3.957438  MAPE: 0.414960  MSPE: 0.374756  RSE: 0.977290  CORR: 0.000000  WMAPE: 0.302388  
+
+italy_ili_MS_uncertainty_4_4_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.217106  MSE: 11.209216  RMSE: 3.348017  MAPE: 0.185631  MSPE: 0.058277  RSE: 0.826794  CORR: 0.000000  WMAPE: 0.205042  
+
+italy_ili_MS_uncertainty_6_4_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.455948  MSE: 12.187637  RMSE: 3.491080  MAPE: 0.204809  MSPE: 0.062888  RSE: 0.862123  CORR: 0.000000  WMAPE: 0.227131  
+
+italy_ili_MS_uncertainty_8_4_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.550347  MSE: 12.471953  RMSE: 3.531565  MAPE: 0.215810  MSPE: 0.064730  RSE: 0.872121  CORR: 0.000000  WMAPE: 0.235861  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_4_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 2.938503  MSE: 13.475012  RMSE: 3.670833  MAPE: 0.294070  MSPE: 0.146227  RSE: 0.906513  CORR: 0.000000  WMAPE: 0.271759  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_4_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 4.043522  MSE: 22.145629  RMSE: 4.705914  MAPE: 0.472342  MSPE: 0.376101  RSE: 1.162127  CORR: 0.000000  WMAPE: 0.373953  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_4_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 2.929086  MSE: 12.331432  RMSE: 3.511614  MAPE: 0.373051  MSPE: 0.312036  RSE: 0.867194  CORR: 0.000000  WMAPE: 0.270888  
+
+italy_ili_MS_uncertainty_4_4_augmentdata_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.486980  MSE: 2.729848  RMSE: 1.652225  MAPE: 0.244104  MSPE: 0.091685  RSE: 1.014742  CORR: 0.000000  WMAPE: 0.218725  
+
+italy_ili_MS_uncertainty_6_4_augmentdata_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.354220  MSE: 2.225360  RMSE: 1.491764  MAPE: 0.215289  MSPE: 0.062712  RSE: 0.916192  CORR: 0.000000  WMAPE: 0.199197  
+
+italy_ili_MS_uncertainty_8_4_augmentdata_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.067540  MSE: 1.839678  RMSE: 1.356347  MAPE: 0.159396  MSPE: 0.040305  RSE: 0.833024  CORR: 0.000000  WMAPE: 0.157028  
+
+italy_ili_MS_uncertainty_4_4_augmentdata_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.478259  MSE: 2.696773  RMSE: 1.642186  MAPE: 0.242580  MSPE: 0.091026  RSE: 1.008576  CORR: 0.000000  WMAPE: 0.217442  
+
+italy_ili_MS_uncertainty_6_4_augmentdata_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.351411  MSE: 2.183086  RMSE: 1.477527  MAPE: 0.213216  MSPE: 0.060423  RSE: 0.907448  CORR: 0.000000  WMAPE: 0.198784  
+
+italy_ili_MS_uncertainty_4_4_augmentdata_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 4.399267  MSE: 22.552658  RMSE: 4.748964  MAPE: 0.481297  MSPE: 0.303810  RSE: 1.172758  CORR: 0.000000  WMAPE: 0.406853  
+
+italy_ili_MS_uncertainty_4_4_augmentdata_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.478259  MSE: 2.696773  RMSE: 1.642186  MAPE: 0.242580  MSPE: 0.091026  RSE: 1.008576  CORR: 0.000000  WMAPE: 0.217442  
+
+italy_ili_MS_uncertainty_4_4_augmentdata_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.337336  MSE: 11.916154  RMSE: 3.451978  MAPE: 0.189021  MSPE: 0.058567  RSE: 0.852467  CORR: 0.000000  WMAPE: 0.216162  
+
+italy_ili_MS_uncertainty_6_4_augmentdata_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.464298  MSE: 12.363199  RMSE: 3.516134  MAPE: 0.202203  MSPE: 0.060934  RSE: 0.868310  CORR: 0.000000  WMAPE: 0.227903  
+
+italy_ili_MS_uncertainty_8_4_augmentdata_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.574127  MSE: 12.627135  RMSE: 3.553468  MAPE: 0.214440  MSPE: 0.062857  RSE: 0.877530  CORR: 0.000000  WMAPE: 0.238060  
+
+italy_ili_MS_uncertainty_4_4_augmentdata_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.337336  MSE: 11.916155  RMSE: 3.451978  MAPE: 0.189021  MSPE: 0.058567  RSE: 0.852467  CORR: 0.000000  WMAPE: 0.216162  
+
+italy_ili_MS_uncertainty_6_4_augmentdata_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.464298  MSE: 12.363198  RMSE: 3.516134  MAPE: 0.202203  MSPE: 0.060934  RSE: 0.868310  CORR: 0.000000  WMAPE: 0.227903  
+
+italy_ili_MS_uncertainty_4_4_augmentdata_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.337336  MSE: 11.916155  RMSE: 3.451978  MAPE: 0.189021  MSPE: 0.058567  RSE: 0.852467  CORR: 0.000000  WMAPE: 0.216162  
+
+italy_ili_MS_uncertainty_6_4_augmentdata_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.464298  MSE: 12.363198  RMSE: 3.516134  MAPE: 0.202203  MSPE: 0.060934  RSE: 0.868310  CORR: 0.000000  WMAPE: 0.227903  
+
+italy_ili_MS_uncertainty_8_4_augmentdata_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.574127  MSE: 12.627134  RMSE: 3.553468  MAPE: 0.214440  MSPE: 0.062857  RSE: 0.877530  CORR: 0.000000  WMAPE: 0.238060  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty__Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 2.314514  MSE: 7.557278  RMSE: 2.749050  MAPE: 0.219842  MSPE: 0.061515  RSE: 0.678879  CORR: 0.000000  WMAPE: 0.214051  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty__Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 1.424849  MSE: 2.579929  RMSE: 1.606216  MAPE: 0.157827  MSPE: 0.037482  RSE: 0.396655  CORR: 0.000000  WMAPE: 0.131773  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty__Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 1.676247  MSE: 4.146984  RMSE: 2.036414  MAPE: 0.184423  MSPE: 0.052812  RSE: 0.502893  CORR: 0.000000  WMAPE: 0.155023  
+
+italy_ili_MS_uncertainty_4_4_augmentdata_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.337336  MSE: 11.916155  RMSE: 3.451978  MAPE: 0.189021  MSPE: 0.058567  RSE: 0.852467  CORR: 0.000000  WMAPE: 0.216162  
+
+italy_ili_MS_uncertainty_6_4_augmentdata_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.464298  MSE: 12.363198  RMSE: 3.516134  MAPE: 0.202203  MSPE: 0.060934  RSE: 0.868310  CORR: 0.000000  WMAPE: 0.227903  
+
+italy_ili_MS_uncertainty_8_4_augmentdata_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.574127  MSE: 12.627134  RMSE: 3.553468  MAPE: 0.214440  MSPE: 0.062857  RSE: 0.877530  CORR: 0.000000  WMAPE: 0.238060  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_4_4_augmentdata_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 2.314514  MSE: 7.557278  RMSE: 2.749050  MAPE: 0.219842  MSPE: 0.061515  RSE: 0.678879  CORR: 0.000000  WMAPE: 0.214051  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_6_4_augmentdata_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 1.424849  MSE: 2.579929  RMSE: 1.606216  MAPE: 0.157827  MSPE: 0.037482  RSE: 0.396655  CORR: 0.000000  WMAPE: 0.131773  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_8_4_augmentdata_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 1.676247  MSE: 4.146984  RMSE: 2.036414  MAPE: 0.184423  MSPE: 0.052812  RSE: 0.502893  CORR: 0.000000  WMAPE: 0.155023  
+
+italy_ili_MS_uncertainty_4_4_augmentdata_noise_only_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.466596  MSE: 12.375019  RMSE: 3.517815  MAPE: 0.202415  MSPE: 0.061535  RSE: 0.868725  CORR: 0.000000  WMAPE: 0.228116  
+
+italy_ili_MS_uncertainty_6_4_augmentdata_noise_only_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.579277  MSE: 12.738041  RMSE: 3.569039  MAPE: 0.214890  MSPE: 0.063834  RSE: 0.881375  CORR: 0.000000  WMAPE: 0.238537  
+
+italy_ili_MS_uncertainty_8_4_augmentdata_noise_only_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.653483  MSE: 13.063793  RMSE: 3.614387  MAPE: 0.221026  MSPE: 0.065254  RSE: 0.892574  CORR: 0.000000  WMAPE: 0.245399  
+
+italy_ili_MS_uncertainty_4_4_augmentdata_shift_only_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.133129  MSE: 10.617404  RMSE: 3.258436  MAPE: 0.179230  MSPE: 0.056933  RSE: 0.804672  CORR: 0.000000  WMAPE: 0.197276  
+
+italy_ili_MS_uncertainty_6_4_augmentdata_shift_only_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.212175  MSE: 11.102669  RMSE: 3.332067  MAPE: 0.182151  MSPE: 0.056425  RSE: 0.822855  CORR: 0.000000  WMAPE: 0.204586  
+
+italy_ili_MS_uncertainty_8_4_augmentdata_shift_only_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.256654  MSE: 11.030637  RMSE: 3.321240  MAPE: 0.188808  MSPE: 0.056175  RSE: 0.820181  CORR: 0.000000  WMAPE: 0.208700  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_4_4_augmentdata_noise_only_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 2.042315  MSE: 6.760447  RMSE: 2.600086  MAPE: 0.198541  MSPE: 0.053022  RSE: 0.642092  CORR: 0.000000  WMAPE: 0.188877  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_6_4_augmentdata_noise_only_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 1.979672  MSE: 5.308375  RMSE: 2.303991  MAPE: 0.204540  MSPE: 0.055258  RSE: 0.568971  CORR: 0.000000  WMAPE: 0.183084  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_8_4_augmentdata_noise_only_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 2.380532  MSE: 7.662122  RMSE: 2.768054  MAPE: 0.241850  MSPE: 0.075920  RSE: 0.683572  CORR: 0.000000  WMAPE: 0.220156  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_4_4_augmentdata_shift_only_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 2.293460  MSE: 9.217062  RMSE: 3.035961  MAPE: 0.201873  MSPE: 0.058676  RSE: 0.749731  CORR: 0.000000  WMAPE: 0.212104  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_6_4_augmentdata_shift_only_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 1.303109  MSE: 2.419980  RMSE: 1.555628  MAPE: 0.138917  MSPE: 0.029862  RSE: 0.384163  CORR: 0.000000  WMAPE: 0.120514  
+
+italy_ili_MS_incidenza_sdscaler_uncertainty_8_4_augmentdata_shift_only_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 1.838892  MSE: 4.940626  RMSE: 2.222752  MAPE: 0.190694  MSPE: 0.050833  RSE: 0.548909  CORR: 0.000000  WMAPE: 0.170064  
+
+China_ili_MS_uncertainty_4_4_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 7.026435  MSE: 90.267249  RMSE: 9.500908  MAPE: 1.937769  MSPE: 5.546505  RSE: 0.842908  CORR: 0.000000  WMAPE: 0.894584  
+
+China_ili_MS_uncertainty_6_4_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 7.089952  MSE: 92.383466  RMSE: 9.611632  MAPE: 1.953925  MSPE: 5.633794  RSE: 0.852731  CORR: 0.000000  WMAPE: 0.902671  
+
+China_ili_MS_uncertainty_8_4_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 6.784595  MSE: 93.189993  RMSE: 9.653496  MAPE: 1.721865  MSPE: 4.318114  RSE: 0.856445  CORR: 0.000000  WMAPE: 0.863794  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_4_4_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 5.644883  MSE: 86.042333  RMSE: 9.275901  MAPE: 1.169609  MSPE: 2.570112  RSE: 0.822945  CORR: 0.000000  WMAPE: 0.718689  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_6_4_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 5.263356  MSE: 58.614128  RMSE: 7.655986  MAPE: 1.150119  MSPE: 2.247702  RSE: 0.679229  CORR: 0.000000  WMAPE: 0.670115  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_8_4_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 6.655143  MSE: 105.016761  RMSE: 10.247769  MAPE: 1.385315  MSPE: 2.755671  RSE: 0.909168  CORR: 0.000000  WMAPE: 0.847313  
+
+China_ili_MS_uncertainty_4_4_augmentdata_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 6.997340  MSE: 90.264943  RMSE: 9.500786  MAPE: 1.924217  MSPE: 5.408822  RSE: 0.842897  CORR: 0.000000  WMAPE: 0.890880  
+
+China_ili_MS_uncertainty_6_4_augmentdata_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 7.027027  MSE: 90.351675  RMSE: 9.505350  MAPE: 1.945421  MSPE: 5.526076  RSE: 0.843302  CORR: 0.000000  WMAPE: 0.894660  
+
+China_ili_MS_uncertainty_8_4_augmentdata_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 7.104862  MSE: 90.313851  RMSE: 9.503360  MAPE: 2.002007  MSPE: 5.887683  RSE: 0.843125  CORR: 0.000000  WMAPE: 0.904570  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_4_4_augmentdata_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 3.926507  MSE: 53.969454  RMSE: 7.346391  MAPE: 0.454004  MSPE: 0.282396  RSE: 0.651762  CORR: 0.000000  WMAPE: 0.499911  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_6_4_augmentdata_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 4.145369  MSE: 53.720654  RMSE: 7.329437  MAPE: 0.553847  MSPE: 0.416988  RSE: 0.650258  CORR: 0.000000  WMAPE: 0.527776  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_8_4_augmentdata_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 4.720027  MSE: 80.096762  RMSE: 8.949679  MAPE: 0.526249  MSPE: 0.541133  RSE: 0.794003  CORR: 0.000000  WMAPE: 0.600940  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_4_4_augmentdata_1_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 7.636290  MSE: 88.154638  RMSE: 9.389070  MAPE: 0.729298  MSPE: 0.947494  RSE: 0.804239  CORR: 0.000000  WMAPE: 0.459607  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_4_4_augmentdata_shift_only_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 4.008960  MSE: 52.636028  RMSE: 7.255069  MAPE: 0.557187  MSPE: 0.472425  RSE: 0.643660  CORR: 0.000000  WMAPE: 0.510409  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_6_4_augmentdata_shift_only_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 4.287687  MSE: 61.119935  RMSE: 7.817924  MAPE: 0.632549  MSPE: 0.719510  RSE: 0.693596  CORR: 0.000000  WMAPE: 0.545895  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_8_4_augmentdata_shift_only_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 4.618276  MSE: 71.287857  RMSE: 8.443214  MAPE: 0.572367  MSPE: 0.537462  RSE: 0.749071  CORR: 0.000000  WMAPE: 0.587985  
+
+China_ili_MS_uncertainty_4_4_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 7.900327  MSE: 80.816603  RMSE: 8.989806  MAPE: 1.609858  MSPE: 6.962801  RSE: 0.770040  CORR: 0.000000  WMAPE: 0.475499  
+
+China_ili_MS_uncertainty_6_4_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 7.620098  MSE: 71.639635  RMSE: 8.464020  MAPE: 1.459370  MSPE: 5.586194  RSE: 0.725002  CORR: 0.000000  WMAPE: 0.458632  
+
+China_ili_MS_uncertainty_8_4_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 7.496928  MSE: 73.066293  RMSE: 8.547882  MAPE: 1.467594  MSPE: 5.848866  RSE: 0.732186  CORR: 0.000000  WMAPE: 0.451219  
+
+China_ili_MS_uncertainty_4_4_augmentdata_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 6.962303  MSE: 62.037818  RMSE: 7.876409  MAPE: 1.431877  MSPE: 5.868415  RSE: 0.674669  CORR: 0.000000  WMAPE: 0.419042  
+
+China_ili_MS_uncertainty_6_4_augmentdata_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 7.016413  MSE: 61.675648  RMSE: 7.853384  MAPE: 1.451133  MSPE: 6.040181  RSE: 0.672697  CORR: 0.000000  WMAPE: 0.422298  
+
+China_ili_MS_uncertainty_8_4_augmentdata_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 7.019757  MSE: 60.223993  RMSE: 7.760412  MAPE: 1.414920  MSPE: 5.658521  RSE: 0.664733  CORR: 0.000000  WMAPE: 0.422500  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_4_4_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 5.979834  MSE: 57.937271  RMSE: 7.611654  MAPE: 0.672588  MSPE: 0.929122  RSE: 0.651991  CORR: 0.000000  WMAPE: 0.359909  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_6_4_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 6.081388  MSE: 59.033686  RMSE: 7.683338  MAPE: 0.573196  MSPE: 0.621588  RSE: 0.658132  CORR: 0.000000  WMAPE: 0.366022  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_8_4_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 6.146233  MSE: 53.909183  RMSE: 7.342287  MAPE: 0.881160  MSPE: 1.787662  RSE: 0.628918  CORR: 0.000000  WMAPE: 0.369925  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_4_4_augmentdata_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 6.755628  MSE: 64.769710  RMSE: 8.047963  MAPE: 0.867510  MSPE: 1.588254  RSE: 0.689364  CORR: 0.000000  WMAPE: 0.406602  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_6_4_augmentdata_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 5.939241  MSE: 53.905538  RMSE: 7.342039  MAPE: 0.602269  MSPE: 0.607838  RSE: 0.628897  CORR: 0.000000  WMAPE: 0.357466  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_8_4_augmentdata_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 4.934520  MSE: 42.222528  RMSE: 6.497886  MAPE: 0.489280  MSPE: 0.446590  RSE: 0.556589  CORR: 0.000000  WMAPE: 0.296995  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_4_4_augmentdata_shift_only_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 5.765732  MSE: 56.115402  RMSE: 7.491021  MAPE: 0.806641  MSPE: 1.543380  RSE: 0.641658  CORR: 0.000000  WMAPE: 0.347023  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_6_4_augmentdata_shift_only_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 6.462971  MSE: 61.292480  RMSE: 7.828951  MAPE: 0.619567  MSPE: 0.616693  RSE: 0.670604  CORR: 0.000000  WMAPE: 0.388988  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_8_4_augmentdata_shift_only_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 5.956704  MSE: 52.518372  RMSE: 7.246956  MAPE: 0.791402  MSPE: 1.496998  RSE: 0.620752  CORR: 0.000000  WMAPE: 0.358517  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_4_4_augmentdata_noise_only_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 5.011808  MSE: 31.295268  RMSE: 5.594217  MAPE: 0.688363  MSPE: 1.040135  RSE: 0.479184  CORR: 0.000000  WMAPE: 0.301647  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_6_4_augmentdata_noise_only_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 5.728802  MSE: 46.819946  RMSE: 6.842510  MAPE: 0.722494  MSPE: 1.248383  RSE: 0.586109  CORR: 0.000000  WMAPE: 0.344801  
+
+China_ili_MS_incidenza_sdscaler_uncertainty_8_4_augmentdata_noise_only_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 5.383429  MSE: 47.563173  RMSE: 6.896606  MAPE: 0.593120  MSPE: 0.702073  RSE: 0.590742  CORR: 0.000000  WMAPE: 0.324014  
+
+European_ili_MS_incidenza_sdscaler_uncertainty_4_4_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: nan  MSE: nan  RMSE: nan  MAPE: nan  MSPE: nan  RSE: nan  CORR: nan  WMAPE: nan  
+
+European_ili_MS_incidenza_sdscaler_uncertainty_6_4_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: nan  MSE: nan  RMSE: nan  MAPE: nan  MSPE: nan  RSE: nan  CORR: nan  WMAPE: nan  
+
+European_ili_MS_incidenza_sdscaler_uncertainty_8_4_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: nan  MSE: nan  RMSE: nan  MAPE: nan  MSPE: nan  RSE: nan  CORR: nan  WMAPE: nan  
+
+European_ili_MS_incidenza_sdscaler_uncertainty_4_4_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 7.042903  MSE: 72.506002  RMSE: 8.515046  MAPE: 0.450362  MSPE: 0.541746  RSE: 0.906087  CORR: 0.000000  WMAPE: 0.338060  
+
+European_ili_MS_incidenza_sdscaler_uncertainty_4_4_Autoformer_custom_ftMS_sl4_ll2_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 1.983383  MSE: 6.489520  RMSE: 2.547454  MAPE: 0.182498  MSPE: 0.050186  RSE: 0.629094  CORR: 0.000000  WMAPE: 0.183427  
+
+European_ili_MS_incidenza_sdscaler_uncertainty_6_4_Autoformer_custom_ftMS_sl6_ll3_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 1.902435  MSE: 5.488088  RMSE: 2.342667  MAPE: 0.205385  MSPE: 0.064793  RSE: 0.578522  CORR: 0.000000  WMAPE: 0.175941  
+
+European_ili_MS_incidenza_sdscaler_uncertainty_8_4_Autoformer_custom_ftMS_sl8_ll4_pl4_dm64_nh4_el2_dl1_df128_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 2.186304  MSE: 7.560283  RMSE: 2.749597  MAPE: 0.208089  MSPE: 0.060352  RSE: 0.679014  CORR: 0.000000  WMAPE: 0.202194  
+
+European_ili_MS_uncertainty_4_4_DLinear_custom_ftMS_sl4_ll2_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.912818  MSE: 15.229583  RMSE: 3.902510  MAPE: 0.251966  MSPE: 0.089626  RSE: 0.963726  CORR: 0.000000  WMAPE: 0.269383  
+
+European_ili_MS_uncertainty_6_4_DLinear_custom_ftMS_sl6_ll3_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.718979  MSE: 15.022168  RMSE: 3.875844  MAPE: 0.213197  MSPE: 0.072801  RSE: 0.957141  CORR: 0.000000  WMAPE: 0.251457  
+
+European_ili_MS_uncertainty_8_4_DLinear_custom_ftMS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 2.732309  MSE: 14.783391  RMSE: 3.844918  MAPE: 0.210424  MSPE: 0.067551  RSE: 0.949503  CORR: 0.000000  WMAPE: 0.252689  
+
+simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_4_3_Autoformer_custom_ftS_sl4_ll4_pl4_dm32_nh2_el2_dl1_df64_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 54.805744  MSE: 5415.067489  RMSE: 73.587142  MAPE: 0.096983  MSPE: 0.028630  RSE: 0.162799  CORR: 0.000000  WMAPE: 0.065087  
+
+simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_6_3_Autoformer_custom_ftS_sl6_ll4_pl4_dm32_nh2_el2_dl1_df64_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 98.141350  MSE: 14555.509214  RMSE: 120.646215  MAPE: 0.152335  MSPE: 0.064634  RSE: 0.287247  CORR: 0.000000  WMAPE: 0.108302  
+
+simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_8_3_Autoformer_custom_ftS_sl8_ll4_pl4_dm32_nh2_el2_dl1_df64_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 126.833616  MSE: 22929.094226  RMSE: 151.423559  MAPE: 0.154988  MSPE: 0.036984  RSE: 0.392933  CORR: 0.000000  WMAPE: 0.130404  
+
+simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_4_3_Autoformer_custom_ftS_sl4_ll4_pl4_dm32_nh2_el2_dl1_df64_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 59.447827  MSE: 5600.841686  RMSE: 74.838771  MAPE: 0.103986  MSPE: 0.028324  RSE: 0.165568  CORR: 0.000000  WMAPE: 0.070600  
+
+simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_4_5_Autoformer_custom_ftS_sl4_ll4_pl4_dm32_nh2_el2_dl1_df64_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 45.301591  MSE: 4200.182414  RMSE: 64.808814  MAPE: 0.086475  MSPE: 0.023597  RSE: 0.143379  CORR: 0.000000  WMAPE: 0.053800  
+
+simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_6_5_Autoformer_custom_ftS_sl6_ll4_pl4_dm32_nh2_el2_dl1_df64_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 62.760042  MSE: 5955.125825  RMSE: 77.169462  MAPE: 0.098140  MSPE: 0.024095  RSE: 0.183733  CORR: 0.000000  WMAPE: 0.069257  
+
+simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_8_5_Autoformer_custom_ftS_sl8_ll4_pl4_dm32_nh2_el2_dl1_df64_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 134.831827  MSE: 34221.345343  RMSE: 184.990122  MAPE: 0.196416  MSPE: 0.115882  RSE: 0.480035  CORR: 0.000000  WMAPE: 0.138627  
+
+simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_4_5_Autoformer_custom_ftS_sl4_ll4_pl4_dm32_nh2_el2_dl1_df64_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 55.993185  MSE: 5418.588591  RMSE: 73.611063  MAPE: 0.123191  MSPE: 0.039553  RSE: 0.162852  CORR: 0.000000  WMAPE: 0.066497  
+
+simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_4_5_Autoformer_custom_ftS_sl4_ll4_pl4_dm32_nh2_el2_dl1_df64_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 45.301591  MSE: 4200.182414  RMSE: 64.808814  MAPE: 0.086475  MSPE: 0.023597  RSE: 0.143379  CORR: 0.000000  WMAPE: 0.053800  
+
+simulated_Italy_ili_MS_uncertainty_4_DLinear_custom_ftS_sl4_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 16.336966  MSE: 416.489421  RMSE: 20.408072  MAPE: 0.025468  MSPE: 0.001286  RSE: 0.045149  CORR: 0.000000  WMAPE: 0.019402  
+
+simulated_Italy_ili_MS_uncertainty_6_DLinear_custom_ftS_sl6_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 38.634439  MSE: 2721.196909  RMSE: 52.165093  MAPE: 0.060134  MSPE: 0.012392  RSE: 0.124200  CORR: 0.000000  WMAPE: 0.042634  
+
+simulated_Italy_ili_MS_uncertainty_8_DLinear_custom_ftS_sl8_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 54.712182  MSE: 7153.741556  RMSE: 84.579794  MAPE: 0.092152  MSPE: 0.041944  RSE: 0.219478  CORR: 0.000000  WMAPE: 0.056252  
+
+Italy_season_ili_MS_uncertainty_4_DLinear_custom_ftS_sl4_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 0.924222  MSE: 1.637428  RMSE: 1.279620  MAPE: 0.097723  MSPE: 0.021041  RSE: 0.334488  CORR: 0.000000  WMAPE: 0.088981  
+
+Italy_season_ili_S_incidenza_sdscaler_uncertainty_4_5_Autoformer_custom_ftS_sl4_ll4_pl4_dm32_nh2_el2_dl1_df64_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 1.771038  MSE: 5.265443  RMSE: 2.294655  MAPE: 0.185141  MSPE: 0.057396  RSE: 0.599815  CORR: 0.000000  WMAPE: 0.170510  
+
+simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_4_5_Autoformer_custom_ftS_sl4_ll4_pl4_dm32_nh2_el2_dl1_df64_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 45.301591  MSE: 4200.182414  RMSE: 64.808814  MAPE: 0.086475  MSPE: 0.023597  RSE: 0.143379  Italy_season_ili_MS_uncertainty_4_DLinear_custom_ftS_sl4_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.167743  MSE: 2.927187  RMSE: 1.710902  MAPE: 0.135604  MSPE: 0.033600  RSE: 0.464435  WMAPE: 0.129978  
+
+Italy_season_ili_MS_uncertainty_4_DLinear_custom_ftS_sl4_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 1.167743  MSE: 2.927187  RMSE: 1.710902  MAPE: 0.135604  MSPE: 0.033600  RSE: 0.464435  WMAPE: 0.129978  
+
+simulated_Italy_ili_MS_uncertainty_4_DLinear_custom_ftS_sl4_ll4_pl4_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue_Exp_0  
+MAE: 16.516846  MSE: 428.262456  RMSE: 20.694503  MAPE: 0.026214  MSPE: 0.001454  RSE: 0.045783  WMAPE: 0.019615  
+
+simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_4_5_Autoformer_custom_ftS_sl4_ll4_pl4_dm32_nh2_el2_dl1_df64_fc3_ebtimeF_dtTrue_Exp_0  
+MAE: 54.888749  MSE: 5638.030724  RMSE: 75.086821  MAPE: 0.104950  MSPE: 0.025011  RSE: 0.166117  WMAPE: 0.065186  
+

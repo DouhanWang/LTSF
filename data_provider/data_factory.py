@@ -15,22 +15,24 @@ def data_provider(args, flag):
     timeenc = 0 if args.embed != 'timeF' else 1
     train_only = args.train_only
 
-    if flag == 'test':
-        shuffle_flag = False
-        drop_last = False
-        batch_size = args.batch_size
-        freq = args.freq
-    elif flag == 'pred':
+    if flag == 'pred':
         shuffle_flag = False
         drop_last = False
         batch_size = 1
         freq = args.freq
         Data = Dataset_Pred
-    else:
+
+    elif flag in ['test', 'val']:
+        shuffle_flag = False
+        drop_last = False           # ✅ 关键：val/test 不丢 batch
+        freq = args.freq
+        batch_size = args.batch_size
+
+    else:  # train
         shuffle_flag = True
         drop_last = True
-        batch_size = args.batch_size
         freq = args.freq
+        batch_size = args.batch_size
 
     data_set = Data(
         root_path=args.root_path,
@@ -43,11 +45,20 @@ def data_provider(args, flag):
         freq=freq,
         train_only=train_only
     )
+
     print(flag, len(data_set))
+
+    # ✅ 关键：防止 batch_size > dataset 导致某些情况下 loader 为空（尤其你不小心又把 drop_last 打开时）
+    if flag in ['test', 'val'] and len(data_set) > 0:
+        batch_size = min(batch_size, len(data_set))
+    elif flag in ['test', 'val'] and len(data_set) == 0:
+        batch_size = 1  # 随便设一个，下面会在 test() 里报更清晰的错
+
     data_loader = DataLoader(
         data_set,
         batch_size=batch_size,
         shuffle=shuffle_flag,
         num_workers=args.num_workers,
-        drop_last=drop_last)
+        drop_last=drop_last
+    )
     return data_set, data_loader

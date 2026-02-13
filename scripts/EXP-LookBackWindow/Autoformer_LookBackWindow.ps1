@@ -8,46 +8,81 @@ if (!(Test-Path "./logs/LookBackWindow")) {
 }
 
 $model_name = "Autoformer"
-$seq_lengths = @(4, 6, 8)
+$seq_lengths = @(4) # , 6, 8
 
 $pred_len = 4
-
-
-
+$label_len = 4
+$moving_avg=@(5) #3
+# for China data
+#--features MS
+#--target incidence
+#--enc_in 1 --dec_in 1 --c_out 1
 # Inner loop for sequence length
 foreach ($seq_len in $seq_lengths) {
-    Write-Host "Starting INCIDENZA: Running $model_name on Italy ILI dataset with seq_len=$seq_len, pred_len = $pred_len ..." -ForegroundColor Cyan
-    $label_len = [Math]::Floor($seq_len / 2)
-    # Run the Python experiment
-    # PowerShell uses a backtick ` for line continuation
-    & "C:\Users\Douhan\anaconda3\envs\ltsf-gpu\python.exe" -u run_longExp.py `
+       foreach($moving_avg in $moving_avg)
+       {
+              Write-Host "Starting INCIDENZA: Running $model_name on combined Italy ILI dataset with seq_len=$seq_len, moving_avg = $moving_avg ..." -ForegroundColor Cyan
+              # Run the Python experiment
+              # PowerShell uses a backtick ` for line continuation
+              # model_id A原本是MS
+              & "C:\Users\Douhan\anaconda3\envs\ltsf-gpu\python.exe" -u run_longExp.py `
            --is_training 1 `
            --root_path ./dataset/ `
-           --data_path italia_17_25_ILI.csv `
-           --model_id italy_ili_MS_incidenza_uncertainty_$seq_len_$pred_len `
+           --data_path combined_Italy_ILI.csv `
+           --model_id "combined_Italy_ili_S_incidenza_sdscaler_uncertainty_${seq_len}_${moving_avg}" `
            --model "$model_name" `
            --data custom `
-           --features MS `
+           --features S `
+           --target incidenza `
            --seq_len $seq_len `
            --label_len $label_len `
            --pred_len $pred_len `
            --e_layers 2 `
            --d_layers 1 `
            --factor 3 `
-           --enc_in 2 `
-           --dec_in 2 `
-           --c_out 2 `
-           --d_model 64 `
-           --d_ff 128 `
-           --n_heads 4 `
-           --des 'Exp' `
+           --moving_avg $moving_avg `
+           --enc_in 1 `
+           --dec_in 1 `
+           --c_out 1 `
+           --d_model 32 `
+           --d_ff 64 `
+           --n_heads 2 `
+           --dropout 0.05 `
+           --des "Exp" `
            --loss mse `
            --itr 1 `
-           --batch_size 4 `
+           --batch_size 32 `
+           --learning_rate 0.0005 `
+           --train_epochs 30 `
+           --num_workers 0 `
+           --patience 3 `
+           --freq w `
            --use_gpu True `
            --gpu 0 `
-           *> "logs/LookBackWindow/${model_name}_italy_ili_MS_incidenza_uncertainty_${seq_len}_${pred_len}.log"
-    Write-Host "Finished $model_name with seq_len = $seq_len, pred_len = $pred_len" -ForegroundColor Green
+           *> "logs/LookBackWindow/${model_name}_combined_Italy_ili_S_incidenza_sdscaler_uncertainty_${seq_len}_${moving_avg}.log"
+              Write-Host "Finished $model_name with seq_len = $seq_len, moving_avg = $moving_avg" -ForegroundColor Green
+       }
 }
 
-Write-Host "All Autoformer Italy ILI experiments complete!" -ForegroundColor Yellow
+Write-Host "All Autoformer ILI experiments complete!" -ForegroundColor Yello w
+
+#           --features MS `
+#           --seq_len $seq_len `
+#           --label_len $label_len `
+#           --pred_len $pred_len `
+#           --e_layers 2 `
+#           --d_layers 1 `
+#           --factor 3 `
+#           --enc_in 1 `
+#           --dec_in 1 `
+#           --c_out 1 `
+#           --d_model 64 `
+#           --d_ff 128 `
+#           --n_heads 4 `
+#           --des 'Exp' `
+#           --loss mse `
+#           --itr 1 `
+#           --batch_size 4 `
+#           --learning_rate 0.001 `
+#           --use_gpu True `
+#           --gpu 0 `
