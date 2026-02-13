@@ -107,7 +107,7 @@ sh scripts/EXP-LongForecasting/Linear/exchange_rate.sh
 ```
 In order to run it on Windows, you can first generate a ps1 version script and use the following code: 
 ```
-powershell -ExecutionPolicy Bypass -File scripts\EXP-LongForecasting\run_autoformer_ili.ps1
+powershell -ExecutionPolicy Bypass -File scripts\EXP-LookBackWindow\Autoformer_LookBackWindow.ps1
 ```
 
 It will start to train DLinear by default, the results will be shown in `logs/LongForecasting`. You can specify the name of the model in the script. (Linear, DLinear, NLinear)
@@ -140,3 +140,4 @@ Please remember to cite all the datasets and compared methods if you use them in
 =======
 # LTSF
 >>>>>>> e08a3f5
+
