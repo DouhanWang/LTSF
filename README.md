@@ -80,11 +80,24 @@ Comparison of method efficiency with Look-back window size 96 and Forecasting st
 
 First, please make sure you have installed Conda. Then, our environment can be installed by:
 ```
-conda create -n LTSF_Linear python=3.6.9
-conda activate LTSF_Linear
+conda create -n ltsf-gpu python=3.10 -y
+conda activate ltsf-gpu
 pip install -r requirements.txt
 ```
 
+TabPFN-ts uses another environment, it can be installed by:
+```
+conda create -n tabpfn-ts python=3.10 -y
+conda activate tabpfn-ts
+python -m pip install -U pip setuptools wheel
+python -m pip install --no-cache-dir --prefer-binary "numpy==1.26.4" "tqdm==4.67.1" "huggingface-hub>=0.34,<1.0" "datasets>=2.15,<4.0"
+python -m pip install --no-cache-dir --prefer-binary tabpfn-time-series==1.0.8
+```
+
+And you can validate if the environment "tabpfn-ts" is installed by
+```
+python -c "import tabpfn_time_series; print('OK')"
+```
 ### Data Preparation
 
 You can obtain all the nine benchmarks from [Google Drive](https://drive.google.com/drive/folders/1ZOYpTUa82_jCcxIdTmyr0LXQfvaM9vIy) provided in Autoformer. All the datasets are well pre-processed and can be used easily.
@@ -140,4 +153,5 @@ Please remember to cite all the datasets and compared methods if you use them in
 =======
 # LTSF
 >>>>>>> e08a3f5
+
 
