@@ -122,7 +122,10 @@ In order to run it on Windows, you can first generate a ps1 version script and u
 ```
 powershell -ExecutionPolicy Bypass -File scripts\EXP-LookBackWindow\Autoformer_LookBackWindow.ps1
 ```
-
+To run all the models across all countries, use
+```
+conda run -n tabpfn-ts --no-capture-output powershell -ExecutionPolicy Bypass -File .\epi4cast\scripts\EXP-LookBackWindow\run_all_countries.ps1
+```
 It will start to train DLinear by default, the results will be shown in `logs/LongForecasting`. You can specify the name of the model in the script. (Linear, DLinear, NLinear)
 
 All scripts about using LTSF-Linear on long forecasting task is in `scripts/EXP-LongForecasting/Linear/`, you can run them in a similar way. The default look-back window in scripts is 336, LTSF-Linear generally achieves better results with longer look-back window as dicussed in the paper. 
@@ -153,5 +156,6 @@ Please remember to cite all the datasets and compared methods if you use them in
 =======
 # LTSF
 >>>>>>> e08a3f5
+
 
 
