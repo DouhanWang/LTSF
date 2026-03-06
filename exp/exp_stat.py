@@ -1,7 +1,7 @@
-from data_provider.data_factory import data_provider
-from exp.exp_basic import Exp_Basic
-from utils.tools import EarlyStopping, adjust_learning_rate, visual
-from utils.metrics import metric
+from epi4cast.data_provider.data_factory import data_provider
+from epi4cast.exp.exp_basic import Exp_Basic
+from epi4cast.utils.tools import EarlyStopping, adjust_learning_rate, visual
+from epi4cast.utils.metrics import metric
 
 import numpy as np
 import torch
@@ -12,7 +12,7 @@ import os
 import time
 import warnings
 import matplotlib.pyplot as plt
-from models.Stat_models import *
+from epi4cast.models.Stat_models import *
 
 warnings.filterwarnings('ignore')
 

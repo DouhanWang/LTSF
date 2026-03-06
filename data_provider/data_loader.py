@@ -5,7 +5,7 @@ import os
 import torch
 from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from utils.timefeatures import time_features
+from epi4cast.utils.timefeatures import time_features
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -330,7 +330,7 @@ class Dataset_Custom(Dataset):
         self.scaler = StandardScaler()  # or MinMaxScaler()
 
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
-        if "combined" in str(self.data_path).lower():
+        if any(k in str(self.data_path).lower() for k in ["combined", "augmented"]):
             self.real_only_val_test = True
             self.real_only_scaler = True
         else:
@@ -538,10 +538,10 @@ class Dataset_Custom(Dataset):
             df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
             df_stamp['minute'] = df_stamp.date.apply(lambda row: row.minute, 1)
             df_stamp['minute'] = df_stamp['minute'].map(lambda x: x // 15)
-            data_stamp = df_stamp.drop(['date'], axis=1).values
+            data_stamp = df_stamp.drop(['date'], axis=1).to_numpy(dtype=np.float32)
         else:
             data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
-            data_stamp = data_stamp.transpose(1, 0)
+            data_stamp = data_stamp.transpose(1, 0).astype(np.float32)
 
         # ---------- 5) apply split indices ----------
         self.data_x = data[split_idx]
@@ -592,8 +592,8 @@ class Dataset_Custom(Dataset):
 
         seq_x = self.data_x[s_begin:s_end]
         seq_y = self.data_y[r_begin:r_end]
-        seq_x_mark = self.data_stamp[s_begin:s_end]
-        seq_y_mark = self.data_stamp[r_begin:r_end]
+        seq_x_mark = np.asarray(self.data_stamp[s_begin:s_end], dtype=np.float32)
+        seq_y_mark = np.asarray(self.data_stamp[r_begin:r_end], dtype=np.float32)
 
         return seq_x, seq_y, seq_x_mark, seq_y_mark
     # def __len__(self):

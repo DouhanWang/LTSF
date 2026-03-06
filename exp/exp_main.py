@@ -1,10 +1,10 @@
-from data_provider.data_factory import data_provider
-from exp.exp_basic import Exp_Basic
-from models import Informer, Autoformer, Transformer, DLinear, Linear, NLinear, LSTM, Naive, ARIMA
-from utils.tools import EarlyStopping, adjust_learning_rate, visual, test_params_flop
-from utils.metrics import metric, mean_WIS_interval, PICP
+from epi4cast.data_provider.data_factory import data_provider
+from epi4cast.exp.exp_basic import Exp_Basic
+from epi4cast.models import Informer, Autoformer, Transformer, DLinear, Linear, NLinear, LSTM, Naive, ARIMA
+from epi4cast.utils.tools import EarlyStopping, adjust_learning_rate, visual, test_params_flop
+from epi4cast.utils.metrics import metric, mean_WIS_interval, PICP
 
-from utils.losses import quantile_loss  # import your custom loss
+
 #from tabpfn_ts.models.tabpfn_ts import TabPFN_ts
 import numpy as np
 import pandas as pd
@@ -228,7 +228,6 @@ class Exp_Main(Exp_Basic):
             self.model.train()
             epoch_time = time.time()
             print("Start iterating train_loader...")
-
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
                 iter_count += 1
                 model_optim.zero_grad()
@@ -317,28 +316,28 @@ class Exp_Main(Exp_Basic):
                 break
 
             adjust_learning_rate(model_optim, epoch + 1, self.args)
-        # ==========================
-        # 保存history plot到 logs/LookBackWindow/historyplot/
-        # ==========================
-        try:
-            history_dir = os.path.join('logs', 'LookBackWindow', 'historyplot')
-            os.makedirs(history_dir, exist_ok=True)
-
-            plt.figure()
-            plt.plot(train_loss_history, label='train_loss')
-            if len(vali_loss_history) > 0:
-                plt.plot(vali_loss_history, label='val_loss')
-            plt.xlabel('epoch')
-            plt.ylabel('loss')
-            plt.legend()
-
-            # 按你指定的命名规则
-            fname = f"{self.args.model}_simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_{self.args.seq_len}_{self.args.moving_avg}.png"
-            plt.savefig(os.path.join(history_dir, fname), dpi=200, bbox_inches='tight')
-            plt.close()
-            print(f"Saved history plot: {os.path.join(history_dir, fname)}")
-        except Exception as e:
-            print(f"Warning: could not save history plot. Error: {e}")
+        # # ==========================
+        # # 保存history plot到 logs/LookBackWindow/historyplot/
+        # # ==========================
+        # try:
+        #     history_dir = os.path.join('logs', 'LookBackWindow', 'historyplot')
+        #     os.makedirs(history_dir, exist_ok=True)
+        #
+        #     plt.figure()
+        #     plt.plot(train_loss_history, label='train_loss')
+        #     if len(vali_loss_history) > 0:
+        #         plt.plot(vali_loss_history, label='val_loss')
+        #     plt.xlabel('epoch')
+        #     plt.ylabel('loss')
+        #     plt.legend()
+        #
+        #     # 按你指定的命名规则
+        #     fname = f"{self.args.model}_simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_{self.args.seq_len}_{self.args.moving_avg}.png"
+        #     plt.savefig(os.path.join(history_dir, fname), dpi=200, bbox_inches='tight')
+        #     plt.close()
+        #     print(f"Saved history plot: {os.path.join(history_dir, fname)}")
+        # except Exception as e:
+        #     print(f"Warning: could not save history plot. Error: {e}")
 
         best_model_path = path + '/' + 'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
@@ -361,40 +360,6 @@ class Exp_Main(Exp_Basic):
         else:
             self.res_q_low = None
             self.res_q_high = None
-
-        # if not self.args.train_only:
-        #     # Rerun validation on the best model
-        #     vali_loss, vali_preds, vali_trues = self.vali(vali_data, vali_loader, criterion)
-        #     # Calculate errors (residuals)
-        #     errors = vali_trues - vali_preds
-        #     # Calculate standard deviation of errors
-        #     self.global_sigma = np.std(errors)  # This is the SCALED sigma
-        #     scaled_sigma = self.global_sigma
-        #
-        #     # --- ADDED: Reverscale sigma for logging ---
-        #     real_sigma = 0
-        #     if vali_data.scale:
-        #         try:
-        #             if hasattr(vali_data.scaler, 'min_'):  # MinMaxScaler
-        #                 target_scale = vali_data.scaler.scale_[-1]
-        #                 real_sigma = self.global_sigma / target_scale
-        #             elif hasattr(vali_data.scaler, 'mean_'):  # StandardScaler
-        #                 target_scale = vali_data.scaler.scale_[-1]  # std
-        #                 real_sigma = self.global_sigma * target_scale
-        #         except Exception as e:
-        #             print(f"Warning: could not reverscale global sigma for logging. Error: {e}")
-        #             real_sigma = scaled_sigma  # fallback
-        #     else:
-        #         real_sigma = scaled_sigma  # It's already in real units
-        #
-        #     print(f"Global sigma (std dev of scaled residuals) calculated: {scaled_sigma:.6f}")
-        #     print(f"Global sigma (REVERSCALED) calculated: {real_sigma:.6f}")
-        #     # --- END OF ADDED BLOCK ---
-        #
-        # else:
-        #     print("train_only=True. Cannot calculate validation sigma. Uncertainty plots will not be available.")
-        #     self.global_sigma = 0  # Set to 0 to avoid errors
-        # --- END OF NEW BLOCK ---
         return self.model
 
     def test(self, setting, test=0):
@@ -406,10 +371,11 @@ class Exp_Main(Exp_Basic):
             self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))
 
         # ---------- folders ----------
-        plot_folder = os.path.join('./test_results/', setting)
+        # --- force outputs under epi4cast/ regardless of cwd ---
+        epi_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))  # .../epi4cast
+        plot_folder = os.path.join(epi_root, "test_results", setting)
+        save_folder = os.path.join(epi_root, "results", setting)
         os.makedirs(plot_folder, exist_ok=True)
-
-        save_folder = os.path.join('./results/', setting)
         os.makedirs(save_folder, exist_ok=True)
 
         # ---------- 2) STITCH ONLY THE PREDICTIONS ----------
@@ -486,6 +452,8 @@ class Exp_Main(Exp_Basic):
             dec_inp = np.concatenate([y_true_part, dec_zeros], axis=0)
 
             # to torch
+            x_mark = np.asarray(x_mark, dtype=np.float32)
+            y_mark = np.asarray(y_mark, dtype=np.float32)
             batch_x = torch.from_numpy(x_enc).float().unsqueeze(0).to(self.device)  # (1, seq_len, C)
             batch_x_mark = torch.from_numpy(x_mark).float().unsqueeze(0).to(self.device)  # (1, seq_len, mark_dim)
             dec_inp_t = torch.from_numpy(dec_inp).float().unsqueeze(0).to(self.device)  # (1, label+pred, C)
@@ -504,7 +472,7 @@ class Exp_Main(Exp_Basic):
             out = out[:, -pred_len:, f_dim:]  # (1, pred_len, C')
             out_np = out.detach().cpu().numpy()[0]  # (pred_len, C')
 
-            # ---- ARIMA CI hook: grab model-produced CI (same window) ----
+            # ---- SARIMA CI hook: grab model-produced CI (same window) ----
             use_arima_ci = (self.args.model == 'ARIMA') and hasattr(self.model, "last_lower") and (
                         self.model.last_lower is not None)
             if use_arima_ci:
@@ -621,7 +589,7 @@ class Exp_Main(Exp_Basic):
             picp80 = PICP(lower_h, upper_h, trues_h)
             wis80 = mean_WIS_interval(lower_h, upper_h, trues_h, alpha)
 
-            from utils.metrics import metric
+
             point_metrics = metric(preds_h.reshape(1, -1, 1), trues_h.reshape(1, -1, 1))
 
             print(f"\n===== {h + 1}-step (save only step {h + 1}) =====")

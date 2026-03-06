@@ -5,7 +5,7 @@
 # from tqdm import tqdm
 # import pmdarima as pm
 # import threading
-# from sklearn.ensemble import GradientBoostingRegressor
+# from sklearn.Respicast import GradientBoostingRegressor
 #
 # class Naive_repeat(nn.Module):
 #     def __init__(self, configs):

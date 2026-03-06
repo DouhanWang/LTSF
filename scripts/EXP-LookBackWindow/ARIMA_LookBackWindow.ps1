@@ -8,19 +8,20 @@ if (!(Test-Path "./logs/LookBackWindow")) {
 }
 
 # --- Your Experiment Settings ---
+$PY = (Get-Command python).Source
 $model_name = "ARIMA"
 $seq_lengths = @(4)
 $pred_len = 4
 $label_len = 0
 
 foreach ($seq_len in $seq_lengths) {
-    Write-Host "Starting Incidenza: Running $model_name on simulated Italy ILI dataset with seq_len=$seq_len ..." -ForegroundColor Cyan
+    Write-Host "Starting Incidenza: Running $model_name on real Italy ILI dataset with seq_len=$seq_len ..." -ForegroundColor Cyan
 
-    & "C:\Users\Douhan\anaconda3\envs\ltsf-gpu\python.exe" -u run_longExp.py `
+    & $PY -u run_longExp.py `
         --is_training 1 `
         --root_path ./dataset/ `
-        --data_path simulated_Italy_ILI_item0.csv `
-        --model_id "simulated_Italy_ili_MS_uncertainty_${seq_len}" `
+        --data_path per_country_csv/IT.csv `
+        --model_id "real_Italy_ili_MS_uncertainty_${seq_len}" `
         --model "$model_name" `
         --data custom `
         --features S `
@@ -43,10 +44,8 @@ foreach ($seq_len in $seq_lengths) {
         --arima_p 1 `
         --arima_d 1 `
         --arima_q 0 `
-        --arima_trend t `
-        --arima_maxiter 200 `
         --arima_alpha 0.2 `
-        *> "logs/LookBackWindow/${model_name}_simulated_Italy_ili_MS_incidenza_uncertainty_${seq_len}.log"
+        *> "logs/LookBackWindow/${model_name}_real_Italy_ili_MS_incidenza_uncertainty_${seq_len}.log"
 
     Write-Host "Finished $model_name with seq_len=$seq_len" -ForegroundColor Green
 }

@@ -6,7 +6,7 @@ if (!(Test-Path "./logs")) {
 if (!(Test-Path "./logs/LookBackWindow")) {
     New-Item -ItemType Directory -Path "./logs/LookBackWindow" | Out-Null
 }
-
+$PY = (Get-Command python).Source
 $model_name = "Autoformer"
 $seq_lengths = @(4) # , 6, 8
 
@@ -25,7 +25,7 @@ foreach ($seq_len in $seq_lengths) {
               # Run the Python experiment
               # PowerShell uses a backtick ` for line continuation
               # model_id A原本是MS
-              & "C:\Users\Douhan\anaconda3\envs\ltsf-gpu\python.exe" -u run_longExp.py `
+              & $PY -u run_longExp.py `
            --is_training 1 `
            --root_path ./dataset/ `
            --data_path combined_Italy_ILI.csv `

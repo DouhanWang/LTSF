@@ -8,6 +8,7 @@ if (!(Test-Path "./logs/LookBackWindow")) {
 }
 
 # --- Your Experiment Settings ---
+$PY = (Get-Command python).Source
 $model_name = "Naive"
 $seq_lengths = @(4)
 $pred_len = 4
@@ -22,7 +23,7 @@ foreach ($seq_len in $seq_lengths) {
     Write-Host "Starting Incidenza: Running $model_name on simulated Italy ILI dataset with seq_len=$seq_len ..." -ForegroundColor Cyan
     # Run the Python experiment
     # PowerShell uses a backtick ` for line continuation
-    & "C:\Users\Douhan\anaconda3\envs\ltsf-gpu\python.exe" -u run_longExp.py `
+    & $PY -u run_longExp.py `
            --is_training 1 `
            --root_path ./dataset/ `
            --data_path simulated_Italy_ILI_item0.csv `

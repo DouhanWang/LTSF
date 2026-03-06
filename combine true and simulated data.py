@@ -1,9 +1,9 @@
 import pandas as pd
 
 # ========= 1) 把单国 IT 导出成 simulated_Italy_ILI.csv，且 item_id=0 =========
-real_path = "./dataset/per_country_csv/FR.csv"          # 你导出的IT文件
-sim_path = "./dataset/simulated_France_ILI.csv"
-out_path = "./dataset/combined_France_ILI.csv"     # 你想要的输出名
+real_path = "./dataset/real_Romania_ILI.csv"          # 你导出的IT文件
+sim_path = "./dataset/simulated_Romania_ILI.csv"
+out_path = "./dataset/combined_Romania_ILI.csv"     # 你想要的输出名
 
 real = pd.read_csv(real_path)
 sim = pd.read_csv(sim_path)

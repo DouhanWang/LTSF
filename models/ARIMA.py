@@ -1,15 +1,19 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import warnings
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 class Model(nn.Module):
     """
-    Robust ARIMA baseline for rolling forecasting.
+    ARIMA baseline fitted per forward call.
 
-    - Fits per forward call (per window / per sample).
-    - Returns point forecast [B, pred_len, C]
-    - Stores 80% CI in:
-        self.last_lower, self.last_upper   (numpy arrays, shape [B, pred_len, C])
+    Inputs:
+        x_enc: [B, L, C]
+    Outputs:
+        out:   [B, pred_len, C]  (point forecast)
+    Side effects:
+        self.last_lower, self.last_upper: numpy arrays [B, pred_len, C] for 80% CI
     """
     def __init__(self, args):
         super().__init__()
@@ -17,48 +21,40 @@ class Model(nn.Module):
 
         # ARIMA order from args
         self.p = int(getattr(args, "arima_p", 1))
-        self.d = int(getattr(args, "arima_d", 0))
+        self.d = int(getattr(args, "arima_d", 1))
         self.q = int(getattr(args, "arima_q", 0))
 
         # 80% CI -> alpha=0.2
         self.alpha = float(getattr(args, "arima_alpha", 0.2))
 
-        # Optional: add drift/trend (recommended when d=1)
-        # For statsmodels ARIMA:
-        #   trend="n" (none), "c" (constant), "t" (linear), "ct" (both)
-        self.trend = str(getattr(args, "arima_trend", "n"))
-        if self.d == 1 and self.trend == "n":
-            # very common to use drift with d=1
-            self.trend = "t"
-
-        # Fit controls
-        self.maxiter = int(getattr(args, "arima_maxiter", 200))
-
-        # fallback orders to try if the requested order fails
-        # keep small/simple to avoid convergence issues
-        self.fallback_orders = [
-            (self.p, self.d, self.q),
-            (0, 1, 1),
-            (1, 1, 0),
-            (0, 1, 0),  # random walk
-            (1, 0, 0),
-        ]
-
-        # dummy param so optimizer/backward in your pipeline won't crash
+        # dummy param so optimizer/backward won't crash
         self.dummy = nn.Parameter(torch.zeros(1))
 
         self.last_lower = None
         self.last_upper = None
 
+        self.trend = str(getattr(args, "arima_trend", "n"))
+        self.maxiter = int(getattr(args, "arima_maxiter", 200))
+
+        # 推荐：如果 d=1 且你没显式给 trend，就默认用 drift
+        if self.d == 1 and self.trend == "n":
+            self.trend = "t"
+        # Fallback orders if fitting fails (keep small/simple)
+        # Try requested first, then common robust alternatives
+        self.try_orders = [
+            (self.p, self.d, self.q),
+            (1, 1, 0),
+            (0, 1, 1),
+            (0, 1, 0),  # random walk
+            (1, 0, 0),
+        ]
+
     @staticmethod
-    def _safe_last_value(y: np.ndarray) -> float:
+    def _last_value(y: np.ndarray) -> float:
         y = y[np.isfinite(y)]
         return float(y[-1]) if y.size > 0 else 0.0
 
     def forward(self, x_enc, x_mark_enc=None, x_dec=None, x_mark_dec=None, mask=None):
-        """
-        x_enc: [B, L, C] (scaled or real, depends on pipeline)
-        """
         device = x_enc.device
         x_np = x_enc.detach().cpu().numpy()
         B, L, C = x_np.shape
@@ -72,22 +68,20 @@ class Model(nn.Module):
         for b in range(B):
             for c in range(C):
                 y = x_np[b, :, c].astype(np.float64)
-
-                # clean
                 y = y[np.isfinite(y)]
-                last = self._safe_last_value(y)
+                last = self._last_value(y)
 
-                # if too short / constant -> naive
+                # Too short or constant -> naive
                 if y.size < 8 or np.allclose(y, y[-1]):
                     preds[b, :, c] = last
                     lowers[b, :, c] = last
                     uppers[b, :, c] = last
                     continue
 
-                # Try a few orders (requested first, then fallbacks)
                 fitted = False
-                for (pp, dd, qq) in self.fallback_orders:
-                    # need enough points
+
+                for (pp, dd, qq) in self.try_orders:
+                    # Need enough points for the chosen order
                     if y.size < max(10, pp + qq + dd + 5):
                         continue
                     try:
@@ -98,28 +92,23 @@ class Model(nn.Module):
                             enforce_stationarity=False,
                             enforce_invertibility=False,
                         )
-                        res = model.fit(method_kwargs={"maxiter": self.maxiter})
+
+                        with warnings.catch_warnings():
+                            warnings.simplefilter("ignore", ConvergenceWarning)
+                            res = model.fit(method_kwargs={"maxiter": self.maxiter})
 
                         fc = res.get_forecast(steps=self.pred_len)
                         mean = np.asarray(fc.predicted_mean, dtype=np.float64)
 
-                        # CI: sometimes conf_int can fail; fallback to normal approx
+                        # CI
                         try:
-                            ci = fc.conf_int(alpha=self.alpha)
+                            ci = fc.conf_int(alpha=self.alpha)  # [pred_len, 2]
                             lo = np.asarray(ci[:, 0], dtype=np.float64)
                             hi = np.asarray(ci[:, 1], dtype=np.float64)
                         except Exception:
-                            # normal approx using forecast variance if available
-                            try:
-                                var = np.asarray(fc.var_pred_mean, dtype=np.float64)
-                                se = np.sqrt(np.maximum(var, 1e-12))
-                                # 80% -> z ≈ 1.2816
-                                z = 1.2815515655446004
-                                lo = mean - z * se
-                                hi = mean + z * se
-                            except Exception:
-                                lo = mean.copy()
-                                hi = mean.copy()
+                            # fallback: degenerate CI if conf_int fails
+                            lo = mean.copy()
+                            hi = mean.copy()
 
                         preds[b, :, c] = mean.astype(np.float32)
                         lowers[b, :, c] = lo.astype(np.float32)
@@ -127,11 +116,11 @@ class Model(nn.Module):
 
                         fitted = True
                         break
+
                     except Exception:
                         continue
 
                 if not fitted:
-                    # ultimate fallback: last value
                     preds[b, :, c] = last
                     lowers[b, :, c] = last
                     uppers[b, :, c] = last

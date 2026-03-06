@@ -1,0 +1,10 @@
+# --- basics ---
+numpy<2.2
+pandas>=1.5
+scikit-learn>=1.3
+
+# --- TabPFN time series ---
+tabpfn-time-series==1.0.8
+
+# --- avoid known pin warnings from tabpfn-client ---
+tqdm<=4.67.1

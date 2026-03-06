@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 from datetime import date
 npz_paths = [
-    "dataset/simulations_ILI/FR_2017_2018.npz",
-    "dataset/simulations_ILI/FR_2018_2019.npz",
-    "dataset/simulations_ILI/FR_2023_2024.npz",
-    "dataset/simulations_ILI/FR_2024_2025.npz",
+    "dataset/simulations_ILI/RO_2017_2018.npz",
+    "dataset/simulations_ILI/RO_2018_2019.npz",
+    "dataset/simulations_ILI/RO_2023_2024.npz",
+    "dataset/simulations_ILI/RO_2024_2025.npz",
 ]
 
 
@@ -60,4 +60,4 @@ combined_df = pd.concat(dfs, ignore_index=True)
 
 combined_df = combined_df[~combined_df["settimana"].isin([40, 41])]
 
-combined_df.to_csv("dataset/simulated_France_ILI.csv", index=False)
+combined_df.to_csv("dataset/simulated_Romania_ILI.csv", index=False)
