@@ -863,6 +863,6 @@ if __name__ == "__main__":
         baseline_tag="Naive_real",
         wis_file_prefix="wis80_point_step",
         settings_contains=None,
-        out_path="./test_results/montages/relwis_grid_step4_new.png",
+        out_path="./test_results/montages/relwis_grid_step4_new.pdf",
         ylim=(0,4),  # 或者 (0,4) 固定
     )
