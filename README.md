@@ -133,10 +133,24 @@ If you want to use specific environment, you can
 conda run -n tabpfn-ts --no-capture-output powershell -ExecutionPolicy Bypass -File .\epi4cast\scripts\EXP-LookBackWindow\run_all_countries.ps1
 ```
 
+After training and prediction, use postprocess_nonneg_dlinear.py to make sure all the predictions are non-negative.
+
+Use extract_respicast_point_pred.npy and extract_respicast_wis_point_to_npy.py to get predictions from Respicast, and use check_missing_wis_rows.py to check missing wis in Repicast，we found that there are some missing values for wis, so we use recompute_Respicast_or_ensemble_wis.py to recompute the wis80 for Respicast.
+
+Use fix_column_names_preds.py to fix column names for all prediction files and use fix_wis_length.py to make sure all wis have correct length.
+
+Use Ensemble.py to get pred of ensemble of our models and recompute_Respicast_or_ensemble_wis.py to compute wis80 for the ensemble.
+
+Use all_metrics.py to compute csv for all metrics and make_metrics_tables_latex.py to get a latex table.
 Combine plots using stitch_montages.py
 ```
 python stitch_montages.py --repo_root . --countries Belgium Czechia Denmark France Ireland Italy Netherlands Poland Romania --models Naive ARIMA DLinear LSTM Autoformer TabPFN_ts
 ```
+
+
+
+
+
 
 It will start to train DLinear by default, the results will be shown in `logs/LongForecasting`. You can specify the name of the model in the script. (Linear, DLinear, NLinear)
 
