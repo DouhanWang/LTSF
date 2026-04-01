@@ -212,11 +212,11 @@ def _align_by_dates(wis_a, dates_a, wis_b, dates_b):
 
 def _paper_style_rcparams():
     plt.rcParams.update({
-        "font.size": 11,
-        "axes.titlesize": 12.5,
-        "axes.labelsize": 11.5,
-        "xtick.labelsize": 10.5,
-        "ytick.labelsize": 10.5,
+        "font.size": 14,
+        "axes.titlesize": 14,
+        "axes.labelsize": 14,
+        "xtick.labelsize": 13,
+        "ytick.labelsize": 13,
         "axes.linewidth": 1.0,
         "pdf.fonttype": 42,
         "ps.fonttype": 42,
@@ -618,26 +618,28 @@ def plot_relative_wis_paper_all(
 # 优雅的低饱和学术配色字典 (用于云雨图)
 # ==========================================
 PAPER_COLORS = {
-    "ARIMA_real": "#999999",  # 灰
+    # 基础基准：从中灰变为深灰，增加分量感
+    "ARIMA_real": "#636363",  # Deep Gray
 
-    # 👇 修改了这里：DLinear 蓝系整体变浅
-    "DLinear_real": "#C6DBEF",  # 极浅的婴儿蓝 (原为 #9ECAE1)
-    "DLinear_aug": "#9ECAE1",  # 柔和浅蓝 (原为 #6BAED6)
-    "DLinear_comb": "#6BAED6",  # 明快的中蓝 (去掉了原有的深蓝色 #2171B5)
+    # DLinear 系列：从浅蓝转向深海蓝/宝石蓝
+    "DLinear_real": "#6BAED6",  # Medium Blue
+    "DLinear_aug": "#3182BD",   # Vibrant Blue
+    "DLinear_comb": "#08519C",  # Deep Navy
 
-    # 👇 修改了这里：LSTM 绿系整体变浅
-    "LSTM_real": "#C7E9C0",  # 极浅的薄荷绿 (原为 #A1D99B)
-    "LSTM_aug": "#A1D99B",  # 柔和浅绿 (原为 #74C476)
-    "LSTM_comb": "#74C476",  # 明快的中绿 (去掉了原有的深绿色 #238B45)
+    # LSTM 系列：从浅绿转向翡翠绿/森林绿
+    "LSTM_real": "#74C476",     # Leaf Green
+    "LSTM_aug": "#31A354",      # Vibrant Green
+    "LSTM_comb": "#006D2C",     # Deep Forest Green
 
-    # 保持之前改好的 Autoformer 橙系
-    "Autoformer_real": "#FDD0A2",  # 奶油橙
-    "Autoformer_aug": "#FDAE6B",  # 浅橙
-    "Autoformer_comb": "#FD8D3C",  # 亮橙
+    # Autoformer 系列：从淡橙转向琥珀色/铁锈橙
+    "Autoformer_real": "#FD8D3C", # Vibrant Orange
+    "Autoformer_aug": "#E6550D",  # Rich Burnt Orange
+    "Autoformer_comb": "#A63603", # Deep Rust
 
-    "TabPFN_ts_real": "#FA9FB5",  # 柔和粉
-    "ensemble_real": "#BCBDDC",  # 柔和紫
-    "Respicast_real": "#B2DF8A",  # 柔青绿
+    # 特殊模型：提高色彩的明度对比
+    "TabPFN_ts_real": "#D81B60",  # 深洋红 (从粉色升级，极具辨识度)
+    "Respicast_real": "#B8860B",
+    "ensemble_real": "#7570B3",   # 皇家紫 (从浅紫升级，突出权威感)
 }
 
 def get_paper_color(tag):
@@ -655,8 +657,8 @@ def plot_relative_wis_grid_3x3(
         baseline_tag="Naive_real",
         wis_file_prefix="wis80_point_step",
         settings_contains=None,
-        out_path="./test_results/montages/relwis_grid_step1.png",
-        dpi=300,
+        out_path="./test_results/montages/relwis_grid_step1.pdf",
+        dpi=800,
         ylim=None,  # 此参数在这里已废弃，改为xlim自适应
 ):
     _paper_style_rcparams()
@@ -813,10 +815,10 @@ def plot_relative_wis_grid_3x3(
 
         # 设置 Y 轴标签
         ax.set_yticks(ys)
-        ax.set_yticklabels(labels, fontsize=10)
+        ax.set_yticklabels(labels, fontsize=13)
 
         # 使用 Title 标注国家名称，看起来更大气
-        ax.set_title(country, loc="left", fontsize=13, fontweight="bold", pad=10)
+        ax.set_title(country, loc="left", fontsize=14, fontweight="bold", pad=10)
 
         # ---- 隐藏多余的 Ticks ----
         r, c = divmod(idx, 3)
@@ -826,7 +828,7 @@ def plot_relative_wis_grid_3x3(
 
         # 只有最下面一行显示 X 轴说明
         if r == 2:
-            ax.set_xlabel("Relative WIS (vs. Naive Real)", fontsize=11, color="#333333", labelpad=8)
+            ax.set_xlabel("Relative WIS (vs. Naive Real)", fontsize=14, color="#333333", labelpad=8)
         else:
             ax.tick_params(axis='x', bottom=True, labelbottom=False)
 

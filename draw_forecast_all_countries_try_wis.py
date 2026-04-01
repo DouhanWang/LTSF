@@ -42,40 +42,49 @@ def _paper_style_rcparams():
     })
 
 def get_model_identity(method, setting):
-    """【完美修复】：将表格里长短不一的名字，规范化为统一的图例名称！"""
     m = str(method).strip().lower()
     s = str(setting).strip().lower() if pd.notna(setting) else ""
     
-    # 1. 处理特殊模型
     if m == "tabpfn_ts": return "TabPFN-TS", "TabPFN_ts_real"
     if m == "ensemble": return "Ensemble", "ensemble_real"
     if m == "respicast": return "RespiCast", "Respicast_real"
     if m == "naive": return "Naive", "ARIMA_real"
     if m == "arima": return "ARIMA", "ARIMA_real"
     
-    # 2. 处理带 setting 的模型 (DLinear, LSTM, Autoformer)
     if m == "dlinear": m_display = "DLinear"
     elif m == "lstm": m_display = "LSTM"
     elif m == "autoformer": m_display = "Autoformer"
     else: m_display = str(method)
     
     if s == "augmented":
-        s_display = "aug"
-        s_tag = "aug"
+        s_display, s_tag = "aug", "aug"
     elif s == "combined":
-        s_display = "comb"
-        s_tag = "comb"
+        s_display, s_tag = "comb", "comb"
     else:
-        s_display = "real"
-        s_tag = "real"
+        s_display, s_tag = "real", "real"
         
     label = f"{m_display} ({s_display})"
     color_key = f"{m_display}_{s_tag}"
     return label, color_key
 
 # ==========================================
-# 2. 加入了去尾端空值的终极读取器
+# 2. 数据读取器 (含 .npy 转 .csv 拦截器)
 # ==========================================
+def get_csv_path_from_row(row, horizon):
+    """【核心转换器】：如果 source_file 是 .npy，自动转换为同目录下的 .csv 画图文件"""
+    source_path = Path(str(row["source_file"]).replace("\\", "/"))
+    run_dir = source_path.parent  # 只取文件夹路径
+    method_name = str(row["method"]).lower()
+    
+    if "tabpfn" in method_name:
+        csv_path = run_dir / f"tabpfn_ts_pred_step{int(horizon)}.csv"
+        if not csv_path.exists(): csv_path = run_dir / f"tabpfn_ts_pred_step_{int(horizon)}.csv"
+    else:
+        csv_path = run_dir / f"rolling_pred_step{int(horizon)}.csv"
+        if not csv_path.exists(): csv_path = run_dir / f"rolling_pred_step_{int(horizon)}.csv"
+        
+    return csv_path
+
 def load_true_from_csv(csv_path, last_n=24):
     p = Path(str(csv_path).replace("\\", "/"))
     if not p.exists(): return None, None
@@ -90,7 +99,6 @@ def load_true_from_csv(csv_path, last_n=24):
     t_vals = pd.to_numeric(df[tcol], errors='coerce').values
     d_vals = df[dcol].astype(str).values if dcol else np.array(["" for _ in range(len(df))])
     
-    # 剥离尾部的空数据 (NaN)
     valids = np.where(~np.isnan(t_vals))[0]
     if len(valids) == 0: return None, None
     end_idx = valids[-1] + 1  
@@ -118,7 +126,6 @@ def load_pred_from_csv(csv_path, last_n=17):
     l_vals = pd.to_numeric(df[lcol], errors='coerce').values if lcol else None
     u_vals = pd.to_numeric(df[ucol], errors='coerce').values if ucol else None
     
-    # 剥离尾部的空数据 (NaN)
     valids = np.where(~np.isnan(p_vals))[0]
     if len(valids) == 0: return None, None, None
     end_idx = valids[-1] + 1 
@@ -141,6 +148,7 @@ def load_pred_from_csv(csv_path, last_n=17):
 def plot_point_forecast_with_interval(
         metrics_csv="./results/metrics_tables/point_metrics_long_real_sim.csv",
         horizon=4,
+        metric_type="MAE",
         out_path="./test_results/montages/all_countries_forecast_step4_MAE_Interval.png"
 ):
     _paper_style_rcparams()
@@ -153,7 +161,7 @@ def plot_point_forecast_with_interval(
     df_sub = df_metrics[
         (df_metrics["dataset_type"] == "real") &
         (df_metrics["step"] == horizon) &
-        (df_metrics["metric"] == "MAE")
+        (df_metrics["metric"] == metric_type)  # 动态过滤 MAE 或 WIS80_mean
     ]
 
     fig, axes = plt.subplots(3, 3, figsize=(16, 12))
@@ -169,14 +177,14 @@ def plot_point_forecast_with_interval(
             continue
 
         # ----------------------------------------------------
-        # 1. 提取 Ground Truth
+        # 1. 提取 Ground Truth (用 Naive 定位)
         # ----------------------------------------------------
         naive_row = df_c[df_c["method"].str.lower() == "naive"]
         if naive_row.empty:
             ax.set_title(f"{country} (No Naive GT)", loc="left")
             continue
             
-        gt_path = naive_row.iloc[0]["source_file"]
+        gt_path = get_csv_path_from_row(naive_row.iloc[0], horizon)
         plot_true, plot_dates = load_true_from_csv(gt_path, last_n=24)
         
         if plot_true is None:
@@ -203,16 +211,20 @@ def plot_point_forecast_with_interval(
         if not others.empty:
             best_row = others.loc[others["value"].idxmin()]
             rows_to_plot.append(best_row)
+            m_set_str = best_row['train_setting'] if pd.notna(best_row['train_setting']) else ''
+            metric_display = "WIS" if metric_type == "WIS80_mean" else metric_type
+            print(f"[{country}] 查表锁定 {metric_display} 最强: {best_row['method']} {m_set_str} ({metric_display}: {best_row['value']:.2f})")
 
         # ----------------------------------------------------
-        # 3. 拿到 source_file 画图
+        # 3. 拿到确切的 csv_path 画图 (自动避开 .npy)
         # ----------------------------------------------------
         for i, row in enumerate(rows_to_plot):
             m_name = row["method"]
             m_set  = row["train_setting"]
-            src    = row["source_file"]
             
-            p_17, l_17, u_17 = load_pred_from_csv(src, last_n=17)
+            csv_path = get_csv_path_from_row(row, horizon)
+            
+            p_17, l_17, u_17 = load_pred_from_csv(csv_path, last_n=17)
             if p_17 is None:
                 continue
                 
@@ -226,7 +238,6 @@ def plot_point_forecast_with_interval(
             if l_17 is not None and u_17 is not None:
                 ax.fill_between(x_pred, l_17, u_17, color=color, alpha=0.2, zorder=10)
 
-            # 把成功画在图上的 label 记录下来，准备放进图例！
             plotted_global_labels[label] = color
 
         # ----------------------------------------------------
@@ -257,7 +268,7 @@ def plot_point_forecast_with_interval(
         if r == 2: ax.set_xlabel("Date", fontsize=11)
 
     # ----------------------------------------------------
-    # 5. 修复图例遗漏：严丝合缝匹配名称
+    # 5. 全局图例
     # ----------------------------------------------------
     legend_elements = [
         mlines.Line2D([], [], color='black', marker='o', markersize=4, linestyle='None', label='True Data'),
@@ -270,8 +281,6 @@ def plot_point_forecast_with_interval(
         "Autoformer (real)", "Autoformer (aug)", "Autoformer (comb)",
         "TabPFN-TS", "Ensemble", "RespiCast"
     ]
-    
-    # 根据我们刚才存下来的 plotted_global_labels，如果在 order_list 里，就把它加进图例
     for lbl in order_list:
         if lbl in plotted_global_labels:
             legend_elements.append(mlines.Line2D([], [], color=plotted_global_labels[lbl], linewidth=2.5, label=lbl))
@@ -279,7 +288,8 @@ def plot_point_forecast_with_interval(
     fig.subplots_adjust(wspace=0.2, hspace=0.35, bottom=0.15)
     fig.legend(handles=legend_elements, loc="lower center", ncol=min(7, len(legend_elements)), bbox_to_anchor=(0.5, 0.02), fontsize=11, frameon=False)
     
-    fig.suptitle(f"Forecast Horizon {horizon}: RespiCast vs. Best Alternative (By MAE Table)", fontsize=15, fontweight="bold", y=0.93)
+    metric_display = "WIS" if metric_type == "WIS80_mean" else metric_type
+    fig.suptitle(f"Forecast Horizon {horizon}: RespiCast vs. Best Alternative (By mean WIS Table)", fontsize=15, fontweight="bold", y=0.93)
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     fig.savefig(out_path, dpi=300, bbox_inches="tight")
@@ -287,8 +297,18 @@ def plot_point_forecast_with_interval(
     print(f"\n[大功告成] 图表已保存至: {out_path}")
 
 if __name__ == "__main__":
+    # 1. 生成基于 MAE 排名的绘图
     plot_point_forecast_with_interval(
         metrics_csv="./results/metrics_tables/point_metrics_long_real_sim.csv",
         horizon=4,
+        metric_type="MAE",
         out_path="./test_results/montages/all_countries_forecast_step4_MAE_Interval.png"
+    )
+
+    # 2. 生成基于 WIS 排名的绘图
+    plot_point_forecast_with_interval(
+        metrics_csv="./results/metrics_tables/point_metrics_long_real_sim.csv",
+        horizon=4,
+        metric_type="WIS80_mean",  # 注意：在 csv 里这个指标叫 WIS80_mean
+        out_path="./test_results/montages/all_countries_forecast_step4_WIS_Interval.png"
     )

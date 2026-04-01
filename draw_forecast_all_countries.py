@@ -4,24 +4,25 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.lines as mlines
 
 # ==========================================
 # 1. 颜色与基础配置
 # ==========================================
 PAPER_COLORS = {
-    "ARIMA_real": "#999999",  
-    "DLinear_real": "#C6DBEF",  
-    "DLinear_aug": "#9ECAE1",
-    "DLinear_comb": "#6BAED6",
-    "LSTM_real": "#C7E9C0",  
-    "LSTM_aug": "#A1D99B",
-    "LSTM_comb": "#74C476",
-    "Autoformer_real": "#FDD0A2",  
-    "Autoformer_aug": "#FDAE6B",
-    "Autoformer_comb": "#FD8D3C",
-    "TabPFN_ts_real": "#FA9FB5",  
-    "ensemble_real": "#BCBDDC",  
-    "Respicast_real": "#B2DF8A",  
+    "ARIMA_real": "#636363", 
+    "DLinear_real": "#6BAED6",  
+    "DLinear_aug": "#3182BD",   
+    "DLinear_comb": "#08519C",  
+    "LSTM_real": "#74C476",     
+    "LSTM_aug": "#31A354",      
+    "LSTM_comb": "#006D2C",     
+    "Autoformer_real": "#FD8D3C", 
+    "Autoformer_aug": "#E6550D",  
+    "Autoformer_comb": "#A63603", 
+    "TabPFN_ts_real": "#D81B60",  
+    "Respicast_real": "#1B9E77",  
+    "ensemble_real": "#7570B3",   
 }
 
 DEFAULT_COUNTRIES = [
@@ -73,8 +74,33 @@ def _paper_style_rcparams():
     })
 
 # ==========================================
-# 2. 数据读取辅助函数
+# 2. 数据读取与误差计算
 # ==========================================
+def calc_mae(pred, true):
+    valid = ~np.isnan(pred) & ~np.isnan(true)
+    if not np.any(valid): return np.inf
+    return np.mean(np.abs(pred[valid] - true[valid]))
+
+def calc_wis80(pred, true, lower, upper):
+    valid = ~np.isnan(pred) & ~np.isnan(true) & ~np.isnan(lower) & ~np.isnan(upper)
+    if not np.any(valid): return np.inf
+    
+    y = true[valid]
+    m = pred[valid]
+    l = lower[valid]
+    u = upper[valid]
+    
+    alpha = 0.2 # 80% coverage
+    
+    ae = np.abs(y - m)
+    disp = u - l
+    under = (2 / alpha) * (l - y) * (y < l)
+    over = (2 / alpha) * (y - u) * (y > u)
+    
+    is80 = disp + under + over
+    wis = 0.5 * ae + (alpha / 2) * is80
+    return np.mean(wis)
+
 def _list_run_dirs(results_root: str):
     return [d for d in glob.glob(os.path.join(results_root, "*")) if os.path.isdir(d)]
 
@@ -98,8 +124,7 @@ def _find_latest_run(run_dirs, country: str, method_tag: str):
         b = os.path.basename(d).lower()
         if c0 in b and m_model in b and m_split in b:
             cand.append(d)
-    if not cand:
-        return None
+    if not cand: return None
     return sorted(cand, key=lambda x: os.path.getmtime(x))[-1]
 
 def _load_data_from_csv(run_dir: str, method_tag: str, horizon: int):
@@ -113,54 +138,34 @@ def _load_data_from_csv(run_dir: str, method_tag: str, horizon: int):
             filename = f"rolling_pred_step_{int(horizon)}.csv"
 
     p = os.path.join(run_dir, filename)
-    if not os.path.exists(p):
-        return None, None, None, None, None
+    if not os.path.exists(p): return None, None, None, None, None
 
     try:
         df = pd.read_csv(p)
     except Exception as e:
-        print(f"[warn] Failed to read {p}: {e}")
         return None, None, None, None, None
 
-    date_cols = ["date", "dates", "timestamp", "time", "ds", "target_date", "forecast_date"]
-    date_col = next((c for c in date_cols if c in df.columns), None)
+    date_col = next((c for c in ["date", "dates", "timestamp", "time", "ds", "target_date", "forecast_date"] if c in df.columns), None)
+    true_col = next((c for c in ["true", "target", "actual", "y", "y_true", "incidenza"] if c in df.columns), None)
 
-    true_cols = ["true", "target", "actual", "y", "y_true", "incidenza"]
-    true_col = next((c for c in true_cols if c in df.columns), None)
-
-    pred_cols = ["pred", "forecast", "mean", "0.5", "q0.5", "p50", "median", "y_pred"]
     if "Respicast" in method_tag and "target" in df.columns:
         pred_col = "target"
-        if true_col == "target":
-            true_col = None
+        if true_col == "target": true_col = None
     else:
-        pred_col = next((c for c in pred_cols if c in df.columns), None)
+        pred_col = next((c for c in ["pred", "forecast", "mean", "0.5", "q0.5", "p50", "median", "y_pred"] if c in df.columns), None)
 
-    low_cols = [f"lower80_step{horizon}", f"lo80_step{horizon}", f"lower_step{horizon}", "lower80", "lower", "lo", "0.1", "q0.1", "p10"]
-    up_cols  = [f"upper80_step{horizon}", f"hi80_step{horizon}", f"upper_step{horizon}", "upper80", "upper", "hi", "0.9", "q0.9", "p90"]
-    low_col = next((c for c in low_cols if c in df.columns), None)
-    up_col  = next((c for c in up_cols if c in df.columns), None)
+    low_col = next((c for c in [f"lower80_step{horizon}", f"lo80_step{horizon}", f"lower_step{horizon}", "lower80", "lower", "lo", "0.1", "q0.1", "p10"] if c in df.columns), None)
+    up_col  = next((c for c in [f"upper80_step{horizon}", f"hi80_step{horizon}", f"upper_step{horizon}", "upper80", "upper", "hi", "0.9", "q0.9", "p90"] if c in df.columns), None)
 
-    if not pred_col:
-        return None, None, None, None, None
+    if not pred_col: return None, None, None, None, None
 
-    # 直接按字符串提取日期，不进行 pd.to_datetime 解析
     dates = df[date_col].fillna("").astype(str).values if date_col else None
-    
     pred_vals = pd.to_numeric(df[pred_col], errors='coerce').values
     true_vals = pd.to_numeric(df[true_col], errors='coerce').values if true_col else None
     lower_vals = pd.to_numeric(df[low_col], errors='coerce').values if low_col else None
     upper_vals = pd.to_numeric(df[up_col], errors='coerce').values if up_col else None
 
-    # 保留最后 25 个点 (严格按倒数截取对齐)
-    last_n = 25
-    if len(pred_vals) > last_n:
-        if dates is not None: dates = dates[-last_n:]
-        pred_vals = pred_vals[-last_n:]
-        if true_vals is not None: true_vals = true_vals[-last_n:]
-        if lower_vals is not None: lower_vals = lower_vals[-last_n:]
-        if upper_vals is not None: upper_vals = upper_vals[-last_n:]
-
+    # 返回原数据，交由外部统一截取
     return pred_vals, true_vals, dates, lower_vals, upper_vals
 
 # ==========================================
@@ -168,9 +173,9 @@ def _load_data_from_csv(run_dir: str, method_tag: str, horizon: int):
 # ==========================================
 def plot_combined_forecast_3x3(
         results_root="./results",
-        horizon=1,
-        seq_len=4,  
-        out_path="./test_results/combined_forecast_step1.png",
+        horizon=4,
+        metric_type="MAE", 
+        out_path="./test_results/combined_forecast_step4.png",
 ):
     _paper_style_rcparams()
     
@@ -181,113 +186,167 @@ def plot_combined_forecast_3x3(
 
     fig, axes = plt.subplots(3, 3, figsize=(16, 12))
     axes = axes.ravel()
-    global_handles_dict = {}
 
     for idx, country in enumerate(DEFAULT_COUNTRIES):
         ax = axes[idx]
-        true_plotted = False
-        master_dates = None  # 用于记录这幅图的 x 轴日期标签
+        raw_country_data = {}
         
+        # 3.1 预加载该国家所有模型的数据
         for method_tag, method_label in DEFAULT_METHODS:
             m_dir = _find_latest_run(run_dirs, country, method_tag)
-            if m_dir is None:
-                continue
+            if m_dir is None: continue
                 
             m_pred, m_true, m_dates, m_lower, m_upper = _load_data_from_csv(m_dir, method_tag, horizon)
-            if m_pred is None:
-                continue
+            if m_pred is None: continue
 
-            # 抓取第一组有效的日期字符串供 X 轴使用
-            if master_dates is None and m_dates is not None and len(m_dates) > 0:
-                master_dates = m_dates
+            raw_country_data[method_tag] = {
+                "label": method_label,
+                "pred": m_pred, "true": m_true, "dates": m_dates,
+                "lower": m_lower, "upper": m_upper
+            }
+
+        if not raw_country_data:
+            ax.set_title(f"{country} (No Data)", loc="left")
+            continue
+
+        # ========================================================
+        # 3.2 严格按照设定截取：True 24 个点，Pred 17 个点
+        # ========================================================
+        master_true = None
+        master_dates = None
+        
+        # 寻找全局统一的 Ground Truth 和 Dates（取最后 24 个点）
+        for data in raw_country_data.values():
+            if master_true is None and data["true"] is not None and len(data["true"]) >= 24:
+                master_true = data["true"][-24:]
+            if master_dates is None and data["dates"] is not None and len(data["dates"]) >= 24:
+                master_dates = data["dates"][-24:]
+        
+        # 如果由于某种原因没有 24 个点，就取所有可用的点作为容错
+        if master_true is None:
+            first_data = list(raw_country_data.values())[0]
+            master_true = first_data["true"][-24:] if first_data["true"] is not None else np.zeros(24)
+            master_dates = first_data["dates"][-24:] if first_data["dates"] is not None else ["" for _ in range(24)]
+
+        # 整理每个模型的预测数据（严格取最后 17 个点）
+        country_data = {}
+        for tag, data in raw_country_data.items():
+            m_pred = data["pred"][-17:] if data["pred"] is not None else None
+            m_lower = data["lower"][-17:] if data["lower"] is not None else None
+            m_upper = data["upper"][-17:] if data["upper"] is not None else None
             
-            # 利用 np.arange 强行作为 X 轴坐标
-            x_pred = np.arange(len(m_pred))
+            # 为了公平计算误差，截取 master_true 的最后 17 个点来与预测值对齐
+            m_true_for_metric = master_true[-17:]
             
-            # 1. 绘制 True Data (黑色散点，大小为3) 和红色分界线
-            if not true_plotted and m_true is not None and not np.isnan(m_true).all():
-                x_true = np.arange(len(m_true))
-                line_true, = ax.plot(x_true, m_true, label="True Data", 
-                                     color="black", marker='o', markersize=3, alpha=0.8, linestyle="None", zorder=10)
+            if metric_type == "WIS":
+                metric_val = calc_wis80(m_pred, m_true_for_metric, m_lower, m_upper)
+            else:
+                metric_val = calc_mae(m_pred, m_true_for_metric)
                 
-                if "True Data" not in global_handles_dict:
-                    global_handles_dict["True Data"] = line_true
-                
-                if len(m_pred) > seq_len:
-                    line_div = ax.axvline(x=seq_len, color='red', linestyle='--', linewidth=1.5, alpha=0.7, zorder=3)
-                    if "Forecast Start" not in global_handles_dict:
-                        global_handles_dict["Forecast Start"] = line_div
-                        
-                true_plotted = True
-            
-            color = get_paper_color(method_tag)
-            
-            # 2. 绘制预测折线 (全部统一使用实线)
-            line_pred, = ax.plot(x_pred, m_pred, label=method_label, 
-                                 color=color, linewidth=1.5, linestyle="-", alpha=0.9, zorder=5)
+            country_data[tag] = {
+                "label": data["label"],
+                "pred": m_pred, "lower": m_lower, "upper": m_upper,
+                "metric": metric_val
+            }
 
-            # 3. 绘制预测区间带
-            if m_lower is not None and m_upper is not None:
-                ax.fill_between(x_pred, m_lower, m_upper, color=color, alpha=0.15, zorder=4)
-            
-            if method_label not in global_handles_dict:
-                global_handles_dict[method_label] = line_pred
+        # 3.3 排序与透明度映射 (最好 0.95，最差 0.15)
+        sorted_tags = sorted(country_data.keys(), key=lambda x: country_data[x]["metric"])
+        num_methods = len(sorted_tags)
+        alphas_map = {tag: a for tag, a in zip(sorted_tags, np.linspace(0.95, 0.15, num_methods))}
 
-        # 手动将日期字符串覆盖到 X 轴上
+        # ==========================================
+        # 3.4 绘制全局 Ground Truth 与分界线
+        # ==========================================
+        # X 轴坐标: Ground truth 对应 0 到 23
+        x_true = np.arange(len(master_true))
+        ax.plot(x_true, master_true, label="True Data", color="black", marker='o', markersize=3.5, alpha=0.9, linestyle="None", zorder=50)
+        
+        # "在 ground truth 的第五个点画分界线" (索引 0, 1, 2, 3, 4 -> 第五点是 x=4)
+        split_idx = 4
+        if len(master_true) > split_idx:
+            ax.axvline(x=split_idx, color='gray', linestyle=':', linewidth=1.5, alpha=0.8, zorder=49)
+        
+        # ==========================================
+        # 3.5 逆序遍历绘制预测值 (确保好模型在最上层)
+        # ==========================================
+        for rank, tag in enumerate(reversed(sorted_tags)):
+            data = country_data[tag]
+            alpha_val = alphas_map[tag]
+            color = get_paper_color(tag)
+            
+            # 预测值 X 坐标定位：因为总长 24，预测长 17，所以起点是 24-17 = 7
+            start_x = len(master_true) - len(data["pred"])
+            x_pred = np.arange(start_x, len(master_true))
+            
+            z_idx = 10 + rank 
+            lw = 1.0 + (alpha_val * 1.5) 
+            
+            # 绘制均值线
+            ax.plot(x_pred, data["pred"], color=color, linewidth=lw, linestyle="-", alpha=alpha_val, zorder=z_idx)
+
+            # 绘制 80% 预测区间
+            if data["lower"] is not None and data["upper"] is not None:
+                fill_alpha = min(alpha_val * 0.25, 0.25)
+                ax.fill_between(x_pred, data["lower"], data["upper"], color=color, alpha=fill_alpha, zorder=z_idx-1)
+
+        # ==========================================
+        # 3.6 格式化 X 轴日期
+        # ==========================================
         if master_dates is not None:
             n_dates = len(master_dates)
-            # 均匀挑选最多 5 个点显示在 X 轴，防止拥挤
-            tick_idx = np.linspace(0, n_dates - 1, min(5, n_dates), dtype=int)
+            tick_idx = np.linspace(0, n_dates - 1, min(6, n_dates), dtype=int)
             ax.set_xticks(tick_idx)
-            ax.set_xticklabels([master_dates[i] for i in tick_idx], rotation=30, ha="right")
+            
+            # 截取 YYYY-MM 格式
+            formatted_dates = []
+            for i in tick_idx:
+                d_str = master_dates[i]
+                if len(d_str) >= 7 and "-" in d_str:
+                    formatted_dates.append(d_str[:7])
+                else:
+                    formatted_dates.append(d_str)
+            
+            ax.set_xticklabels(formatted_dates, rotation=25, ha="right")
 
-        # 样式设置
-        ax.set_title(country, loc="left", fontsize=13, fontweight="bold")
-        if country in COUNTRY_YLIM:
-            ax.set_ylim(COUNTRY_YLIM[country])
+        # 子图美化
+        ax.set_title(f"{country}", loc="left", fontsize=13, fontweight="bold")
+        if country in COUNTRY_YLIM: ax.set_ylim(COUNTRY_YLIM[country])
 
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         
         r, c = divmod(idx, 3)
-        if c == 0:
-            ax.set_ylabel("Incidence", fontsize=11)
-        if r == 2:
-            ax.set_xlabel("Date", fontsize=11)
+        if c == 0: ax.set_ylabel("Incidence", fontsize=11)
+        if r == 2: ax.set_xlabel("Date", fontsize=11)
 
-    # 统一提取 Legend
-    handles = []
-    labels = []
-    
-    for fixed_label in ["True Data", "Forecast Start"]:
-        if fixed_label in global_handles_dict:
-            handles.append(global_handles_dict[fixed_label])
-            labels.append(fixed_label)
-        
-    for _, method_label in DEFAULT_METHODS:
-        if method_label in global_handles_dict:
-            handles.append(global_handles_dict[method_label])
-            labels.append(method_label)
+    # 3.7 全局图例
+    legend_elements = [
+        mlines.Line2D([], [], color='black', marker='o', markersize=4, linestyle='None', label='True Data'),
+        mlines.Line2D([], [], color='gray', linestyle=':', linewidth=1.5, label='Split')
+    ]
+    for tag, label in DEFAULT_METHODS:
+        legend_elements.append(mlines.Line2D([], [], color=get_paper_color(tag), linewidth=2.5, label=label))
 
-    # 增加底部空间放置图例
     fig.subplots_adjust(wspace=0.2, hspace=0.35, bottom=0.15)
-    
-    fig.legend(handles, labels, 
-               loc="lower center", 
-               ncol=7, 
-               bbox_to_anchor=(0.5, 0.02),
-               fontsize=11,
-               frameon=False)
+    fig.legend(handles=legend_elements, loc="lower center", ncol=8, bbox_to_anchor=(0.5, 0.02), fontsize=10, frameon=False)
+    fig.suptitle(f"Forecast Horizon {horizon} (Sorted by {metric_type}: High Opacity = Better Performance)", fontsize=15, fontweight="bold", y=0.93)
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     fig.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
-    print(f"Saved combined forecast grid to: {out_path}")
+    print(f"Saved {metric_type} ranked forecast grid to: {out_path}")
 
 if __name__ == "__main__":
     plot_combined_forecast_3x3(
         results_root="./results",
         horizon=4,
-        seq_len=4,
-        out_path="./test_results/montages/all_countries_forecast_step4.png"
+        metric_type="MAE",
+        out_path="./test_results/montages/all_countries_forecast_step4_MAE.png"
+    )
+
+    plot_combined_forecast_3x3(
+        results_root="./results",
+        horizon=4,
+        metric_type="WIS",
+        out_path="./test_results/montages/all_countries_forecast_step4_WIS.png"
     )

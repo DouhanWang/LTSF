@@ -9,19 +9,28 @@ import matplotlib as mpl
 # 优雅的低饱和学术配色字典 (用于云雨图)
 # ==========================================
 PAPER_COLORS = {
-    "ARIMA_real": "#999999",  # 灰
-    "DLinear_real": "#C6DBEF",  # 浅蓝
-    "DLinear_aug": "#9ECAE1",
-    "DLinear_comb": "#6BAED6",
-    "LSTM_real": "#C7E9C0",  # 浅绿
-    "LSTM_aug": "#A1D99B",
-    "LSTM_comb": "#74C476",
-    "Autoformer_real": "#FDD0A2",  # 浅橙
-    "Autoformer_aug": "#FDAE6B",
-    "Autoformer_comb": "#FD8D3C",
-    "TabPFN_ts_real": "#FA9FB5",  # 柔和粉
-    "ensemble_real": "#BCBDDC",  # 柔和紫
-    "Respicast_real": "#B2DF8A",  # 柔青绿
+    # 基础基准：从中灰变为深灰，增加分量感
+    "ARIMA_real": "#636363",  # Deep Gray
+
+    # DLinear 系列：从浅蓝转向深海蓝/宝石蓝
+    "DLinear_real": "#6BAED6",  # Medium Blue
+    "DLinear_aug": "#3182BD",   # Vibrant Blue
+    "DLinear_comb": "#08519C",  # Deep Navy
+
+    # LSTM 系列：从浅绿转向翡翠绿/森林绿
+    "LSTM_real": "#74C476",     # Leaf Green
+    "LSTM_aug": "#31A354",      # Vibrant Green
+    "LSTM_comb": "#006D2C",     # Deep Forest Green
+
+    # Autoformer 系列：从淡橙转向琥珀色/铁锈橙
+    "Autoformer_real": "#FD8D3C", # Vibrant Orange
+    "Autoformer_aug": "#E6550D",  # Rich Burnt Orange
+    "Autoformer_comb": "#A63603", # Deep Rust
+
+    # 特殊模型：提高色彩的明度对比
+    "TabPFN_ts_real": "#D81B60",  # 深洋红 (从粉色升级，极具辨识度)
+   "Respicast_real": "#B8860B",
+    "ensemble_real": "#7570B3",   # 皇家紫 (从浅紫升级，突出权威感)
 }
 
 DEFAULT_COUNTRIES = [
@@ -156,11 +165,11 @@ def _align_by_dates(val_a, dates_a, val_b, dates_b):
 
 def _paper_style_rcparams():
     plt.rcParams.update({
-        "font.size": 11,
-        "axes.titlesize": 12.5,
-        "axes.labelsize": 11.5,
-        "xtick.labelsize": 10.5,
-        "ytick.labelsize": 10.5,
+        "font.size": 14,
+        "axes.titlesize": 14,
+        "axes.labelsize": 14,
+        "xtick.labelsize": 13,
+        "ytick.labelsize": 13,
         "axes.linewidth": 1.0,
         "pdf.fonttype": 42,
         "ps.fonttype": 42,
@@ -178,7 +187,7 @@ def plot_relative_ae_grid_3x3(
         baseline_tag="Naive_real",
         settings_contains=None,
         out_path="./test_results/montages/relae_grid_step1.png",
-        dpi=300,
+        dpi=800,
 ):
     _paper_style_rcparams()
 
@@ -316,15 +325,15 @@ def plot_relative_ae_grid_3x3(
         ax.spines["left"].set_color("#DDDDDD")
 
         ax.set_yticks(ys)
-        ax.set_yticklabels(labels, fontsize=10)
-        ax.set_title(country, loc="left", fontsize=13, fontweight="bold", pad=10)
+        ax.set_yticklabels(labels, fontsize=13)
+        ax.set_title(country, loc="left", fontsize=14, fontweight="bold", pad=10)
 
         r, c = divmod(idx, 3)
         if c != 0:
             ax.tick_params(axis='y', left=False, labelleft=False)
 
         if r == 2:
-            ax.set_xlabel("Relative Absolute Error (vs. Naive Real)", fontsize=11, color="#333333", labelpad=8)
+            ax.set_xlabel("Relative Absolute Error (vs. Naive Real)", fontsize=14, color="#333333", labelpad=8)
         else:
             ax.tick_params(axis='x', bottom=True, labelbottom=False)
 
@@ -343,5 +352,6 @@ if __name__ == "__main__":
         methods=DEFAULT_METHODS,
         baseline_tag="Naive_real",
         settings_contains=None,
-        out_path="./test_results/montages/relae_grid_step4_new.png",
+        out_path="./test_results/montages/relae_grid_step4_new.pdf",
+        dpi=800,
     )
