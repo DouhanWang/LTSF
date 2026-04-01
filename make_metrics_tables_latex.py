@@ -6,29 +6,61 @@ IN_PATH = Path("results/metrics_tables/point_metrics_long_real_sim.csv")
 OUT_DIR = Path("results/metrics_tables")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# 你要显示的 dataset_type：如果只要 real 就改成 "real"
 DATASET_TYPE = "real"
 
 COUNTRIES = ["Belgium","Czechia","Denmark","France","Ireland","Italy","Netherlands","Poland","Romania"]
-STEPS = [1,2,3,4]
+STEPS = [1, 2, 3, 4]
 ALL_METRICS = ["MAE", "wMAPE", "WIS80_mean"]
 
-# 列结构：方法 -> 子列(训练设置)
+# Flat column order: (method, train_setting) — must match CSV values exactly
 COL_PLAN = [
-    ("Naive", [""],
-     ),
-    ("ARIMA", [""],
-     ),
-    ("DLinear", ["real","augmented","combined"]),
-    ("LSTM", ["real","augmented","combined"]),
-    ("Autoformer", ["real","augmented","combined"]),
-    ("TabPFN_ts", [""],
-     ),
-    ("Respicast", [""],
-     ),
-    ("Ensemble", [""],
-     ),
+    ("Naive",      ""),
+    ("ARIMA",      ""),
+    ("DLinear",    "real"),
+    ("DLinear",    "augmented"),
+    ("DLinear",    "combined"),
+    ("LSTM",       "real"),
+    ("LSTM",       "augmented"),
+    ("LSTM",       "combined"),
+    ("Autoformer", "real"),
+    ("Autoformer", "augmented"),
+    ("Autoformer", "combined"),
+    ("TabPFN_ts",  ""),
+    ("Respicast",  ""),
+    ("Ensemble",   ""),
 ]
+
+# Header groups for row 1:
+#   (display_name, n_cols, use_multirow2, sub_labels_row2)
+# use_multirow2=True  -> \multirow{2}{*}{\textbf{display}} in row 1, empty in row 2
+# use_multirow2=False -> \multicolumn{n}{c}{\textbf{display}} in row 1, sub_labels in row 2
+HEADER_GROUPS = [
+    ("Naive ARIMA", 2, False, ["real", "real"]),
+    ("DLinear",     3, False, ["real", "aug", "combined"]),
+    ("LSTM",        3, False, ["real", "aug", "combined"]),
+    ("Autoformer",  3, False, ["real", "aug", "combined"]),
+    ("TabPFN\\_ts", 1, True,  [""]),
+    ("Respicast",   1, True,  [""]),
+    ("Ensemble",    1, True,  [""]),
+]
+
+# colspec: ll (Country, Step) + one group per HEADER_GROUPS entry
+# Result: ll cc ccc ccc ccc c c c  (16 cols total)
+_group_specs = ["".join("c" for _ in range(n)) for _, n, _, _ in HEADER_GROUPS]
+COLSPEC = "ll " + " ".join(_group_specs)
+
+# cmidrule positions (1-indexed; cols 1-2 are label cols)
+def build_cmidrule():
+    parts = []
+    col = 3  # first data col
+    for _, n, use_multirow, _ in HEADER_GROUPS:
+        if not use_multirow and n > 1:
+            parts.append(f"\\cmidrule(lr){{{col}-{col + n - 1}}}")
+        col += n
+    return " ".join(parts)
+
+CMIDRULE = build_cmidrule()
+
 
 def fmt(x):
     if x is None or (isinstance(x, float) and (np.isnan(x) or np.isinf(x))):
@@ -38,22 +70,25 @@ def fmt(x):
 def escape(s: str) -> str:
     return s.replace("_", "\\_")
 
-def build_columns():
-    """Return list of (method, train_setting) for table columns in order."""
-    cols = []
-    for m, subs in COL_PLAN:
-        for sub in subs:
-            cols.append((m, sub))
-    return cols
+def build_header():
+    """Return (h1_line, cmidrule_line, h2_line) as LaTeX strings."""
+    h1 = ["\\multirow{2}{*}{\\textbf{Country}}", "\\multirow{2}{*}{\\textbf{Step}}"]
+    h2 = ["", ""]
 
-def make_rows(metrics):
-    """Return list of (country, step, metric) row keys in order."""
-    rows = []
-    for c in COUNTRIES:
-        for s in STEPS:
-            for met in metrics:
-                rows.append((c, s, met))
-    return rows
+    for display, n, use_multirow, sub_labels in HEADER_GROUPS:
+        if use_multirow:
+            h1.append(f"\\multirow{{2}}{{*}}{{\\textbf{{{display}}}}}")
+        else:
+            h1.append(f"\\multicolumn{{{n}}}{{c}}{{\\textbf{{{display}}}}}")
+        for lbl in sub_labels:
+            h2.append(lbl)
+
+    return (
+        " & ".join(h1) + " \\\\",
+        CMIDRULE,
+        " & ".join(h2) + " \\\\",
+    )
+
 
 def main():
     if not IN_PATH.exists():
@@ -63,43 +98,40 @@ def main():
     df_all["step"] = df_all["step"].astype(int)
     df_all["train_setting"] = df_all["train_setting"].fillna("").astype(str)
 
+    col_index = pd.MultiIndex.from_tuples(COL_PLAN, names=["method", "train_setting"])
+    row_order = pd.MultiIndex.from_tuples(
+        [(c, s) for c in COUNTRIES for s in STEPS],
+        names=["country", "step"],
+    )
+
     metric_display = {
-        "MAE": "MAE",
-        "wMAPE": "wMAPE",
+        "MAE":       "MAE",
+        "wMAPE":     "wMAPE",
         "WIS80_mean": "mean WIS",
     }
 
-    for ONE_METRIC in ALL_METRICS:
-        METRICS = [ONE_METRIC]
+    h1_line, cmidrule_line, h2_line = build_header()
 
-        # filter (IMPORTANT: use df_all, do NOT overwrite it)
+    for ONE_METRIC in ALL_METRICS:
         df_sub = df_all[
             (df_all["dataset_type"] == DATASET_TYPE) &
             (df_all["country"].isin(COUNTRIES)) &
             (df_all["step"].isin(STEPS)) &
-            (df_all["metric"].isin(METRICS))
+            (df_all["metric"] == ONE_METRIC)
         ].copy()
 
-        # pivot to wide
         wide = df_sub.pivot_table(
-            index=["country", "step", "metric"],
+            index=["country", "step"],
             columns=["method", "train_setting"],
             values="value",
-            aggfunc="first"
+            aggfunc="first",
         )
-
-        # enforce column order
-        col_order = pd.MultiIndex.from_tuples(build_columns(), names=["method", "train_setting"])
-        wide = wide.reindex(columns=col_order)
-
-        # enforce row order (IMPORTANT: only current METRICS)
-        row_order = pd.MultiIndex.from_tuples(make_rows(METRICS), names=["country", "step", "metric"])
+        wide = wide.reindex(columns=col_index)
         wide = wide.reindex(row_order)
 
-        # format as strings + bold row best
+        # Bold minimum value in each row
         row_best = wide.min(axis=1, skipna=True)
         wide_str = wide.astype(object)
-
         for idx in wide.index:
             best = row_best.loc[idx]
             for col in wide.columns:
@@ -113,73 +145,49 @@ def main():
                     else:
                         wide_str.loc[idx, col] = s
 
-        # ---------- LaTeX rendering ----------
-        n_data_cols = wide_str.shape[1]
-        colspec = "lll" + "c" * n_data_cols
-
-        header1 = ["", "", ""]
-        header2 = ["Country", "Step", "Metric"]
-        for m, subs in COL_PLAN:
-            header1.append(f"\\multicolumn{{{len(subs)}}}{{c}}{{{escape(m)}}}")
-            for sub in subs:
-                header2.append(escape(sub) if sub != "" else "")
-
-        h1 = " & ".join(header1) + " \\\\"
-        h2 = " & ".join(header2) + " \\\\"
-
+        # Build LaTeX lines
         lines = []
-        lines.append(r"\begin{landscape}")
-        lines.append(r"\begin{table}[t]")
-        lines.append("\\vspace*{-0.6cm}")
-        lines.append("\\centering")
-        lines.append("\\hspace*{-0.6cm}")
-        lines.append("\\scriptsize")
-        lines.append("\\setlength\\tabcolsep{1.8pt}")
-        lines.append("\\renewcommand{\\arraystretch}{1.0}")
-        lines.append("\\resizebox{\\linewidth}{!}{%")
-        lines.append(f"\\begin{{tabular}}{{{colspec}}}")
-        lines.append("\\toprule")
-        lines.append(h1)
-        lines.append(h2)
-        lines.append("\\midrule")
+        lines.append(r"\begin{table}[htbp]")
+        lines.append(r"\centering")
+        lines.append(r"\makebox[\textwidth][c]{")
+        lines.append(r"\fontsize{7.2pt}{10pt}\selectfont")
+        lines.append(r"\addtolength{\tabcolsep}{-5pt}")
+        lines.append(f"\\begin{{tabular}}{{{COLSPEC}}}")
+        lines.append(r"\toprule")
+        lines.append(h1_line)
+        lines.append(cmidrule_line)
+        lines.append(h2_line)
+        lines.append(r"\midrule")
 
-        rows = wide_str.index.tolist()
         data = wide_str.to_numpy()
+        country_span = len(STEPS)
 
-        country_span = len(STEPS) * len(METRICS)  # here METRICS=1 -> span=4
-        step_span = len(METRICS)                  # -> 1
-
-        for i, (country, step, metric) in enumerate(rows):
-            if i % country_span == 0:
-                c_cell = f"\\multirow{{{country_span}}}{{*}}{{{escape(country)}}}"
-            else:
-                c_cell = ""
-
-            if i % step_span == 0:
-                s_cell = f"\\multirow{{{step_span}}}{{*}}{{step{step}}}"
-            else:
-                s_cell = ""
-
-            m_cell = escape(metric_display.get(metric, metric))
-
+        for i, (country, step) in enumerate(wide_str.index.tolist()):
+            c_cell = f"\\multirow{{{country_span}}}{{*}}{{{escape(country)}}}" if i % country_span == 0 else ""
+            s_cell = f"step{step}"
             vals = list(data[i, :])
-            lines.append(" & ".join([c_cell, s_cell, m_cell] + vals) + " \\\\")
+            lines.append(" & ".join([c_cell, s_cell] + vals) + " \\\\")
+            # midrule between countries, but not after the last
+            if (i + 1) % country_span == 0 and (i + 1) != len(wide_str):
+                lines.append(r"\midrule")
 
-            if (i + 1) % country_span == 0 and (i + 1) != len(rows):
-                lines.append("\\midrule")
+        lines.append(r"\bottomrule")
+        lines.append(r"\end{tabular}")
+        lines.append(r"}")
 
-        lines.append("\\bottomrule")
-        lines.append("\\end{tabular}%")
-        lines.append("}")
-        lines.append("\\vspace*{-0.2cm}")
-        lines.append(f"\\caption{{{escape(DATASET_TYPE)} dataset: one-table summary across 9 countries, 4 horizons, and metric {escape(ONE_METRIC)}.}}")
-        lines.append(f"\\label{{tab:big_{escape(DATASET_TYPE)}_{escape(ONE_METRIC)}}}")
+        disp = metric_display.get(ONE_METRIC, ONE_METRIC)
+        label_metric = ONE_METRIC.replace("_", "-")
+        lines.append(
+            f"\\caption{{{escape(DATASET_TYPE)} dataset: one-table summary "
+            f"across 9 countries, 4 horizons, and metric {disp}.}}"
+        )
+        lines.append(f"\\label{{tab:big-{DATASET_TYPE}-{label_metric}}}")
         lines.append(r"\end{table}")
-        lines.append(r"\end{landscape}")
 
         out_tex = OUT_DIR / f"big_table_{DATASET_TYPE}_{ONE_METRIC}.tex"
         out_tex.write_text("\n".join(lines), encoding="utf-8")
-        print(f"[OK] wrote {out_tex} (rows={len(rows)}, nonempty={wide.notna().sum().sum()})")
+        print(f"[OK] wrote {out_tex}  (rows={len(wide_str)}, nonempty={wide.notna().sum().sum()})")
+
 
 if __name__ == "__main__":
     main()

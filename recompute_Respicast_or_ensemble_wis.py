@@ -35,7 +35,7 @@ def wis_pointwise(pred_lower, pred_upper, true, alpha):
 
 
 def compute_and_save(country, step, alpha=0.2):
-    ens_dir = f"results/ensemble_real_{country}_ILI"
+    ens_dir = f"results/Ensemble_real_{country}_ILI"
     ens_path = f"{ens_dir}/rolling_pred_step{step}.csv"
     naive_path = f"results/Naive_real_{country}_ILI/rolling_pred_step{step}.csv"
 
