@@ -71,17 +71,16 @@ def get_model_identity(method, setting):
 # 2. 数据读取器 (含 .npy 转 .csv 拦截器)
 # ==========================================
 def get_csv_path_from_row(row, horizon):
-    """【核心转换器】：如果 source_file 是 .npy，自动转换为同目录下的 .csv 画图文件"""
+    """【核心转换器】：现在全宇宙都统一了，直接读取 rolling_pred_stepX.csv"""
     source_path = Path(str(row["source_file"]).replace("\\", "/"))
     run_dir = source_path.parent  # 只取文件夹路径
-    method_name = str(row["method"]).lower()
     
-    if "tabpfn" in method_name:
-        csv_path = run_dir / f"tabpfn_ts_pred_step{int(horizon)}.csv"
-        if not csv_path.exists(): csv_path = run_dir / f"tabpfn_ts_pred_step_{int(horizon)}.csv"
-    else:
-        csv_path = run_dir / f"rolling_pred_step{int(horizon)}.csv"
-        if not csv_path.exists(): csv_path = run_dir / f"rolling_pred_step_{int(horizon)}.csv"
+    # 无脑读取统一命名的 CSV
+    csv_path = run_dir / f"rolling_pred_step{int(horizon)}.csv"
+    
+    # 加个防呆设计，万一有下划线
+    if not csv_path.exists(): 
+        csv_path = run_dir / f"rolling_pred_step_{int(horizon)}.csv"
         
     return csv_path
 
@@ -161,7 +160,7 @@ def plot_point_forecast_with_interval(
     df_sub = df_metrics[
         (df_metrics["dataset_type"] == "real") &
         (df_metrics["step"] == horizon) &
-        (df_metrics["metric"] == metric_type)  # 动态过滤 MAE 或 WIS80_mean
+        (df_metrics["metric"] == metric_type)  # 动态过滤 MAE 或 IS80_mean
     ]
 
     fig, axes = plt.subplots(3, 3, figsize=(16, 12))
@@ -212,7 +211,7 @@ def plot_point_forecast_with_interval(
             best_row = others.loc[others["value"].idxmin()]
             rows_to_plot.append(best_row)
             m_set_str = best_row['train_setting'] if pd.notna(best_row['train_setting']) else ''
-            metric_display = "WIS" if metric_type == "WIS80_mean" else metric_type
+            metric_display = "IS" if metric_type == "WIS80_mean" else metric_type
             print(f"[{country}] 查表锁定 {metric_display} 最强: {best_row['method']} {m_set_str} ({metric_display}: {best_row['value']:.2f})")
 
         # ----------------------------------------------------
@@ -288,11 +287,11 @@ def plot_point_forecast_with_interval(
     fig.subplots_adjust(wspace=0.2, hspace=0.35, bottom=0.15)
     fig.legend(handles=legend_elements, loc="lower center", ncol=min(7, len(legend_elements)), bbox_to_anchor=(0.5, 0.02), fontsize=11, frameon=False)
     
-    metric_display = "WIS" if metric_type == "WIS80_mean" else metric_type
-    fig.suptitle(f"Forecast Horizon {horizon}: RespiCast vs. Best Alternative (By mean WIS Table)", fontsize=15, fontweight="bold", y=0.93)
+    metric_display = "IS" if metric_type == "WIS80_mean" else metric_type
+    fig.suptitle(f"Forecast Horizon {horizon}: RespiCast vs. Best Alternative (By {metric_display})", fontsize=15, fontweight="bold", y=0.93)
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    fig.savefig(out_path, dpi=300, bbox_inches="tight")
+    fig.savefig(out_path, dpi=800, bbox_inches="tight")
     plt.close(fig)
     print(f"\n[大功告成] 图表已保存至: {out_path}")
 
@@ -302,13 +301,13 @@ if __name__ == "__main__":
         metrics_csv="./results/metrics_tables/point_metrics_long_real_sim.csv",
         horizon=4,
         metric_type="MAE",
-        out_path="./test_results/montages/all_countries_forecast_step4_MAE_Interval.png"
+        out_path="./test_results/montages/all_countries_forecast_step4_MAE_Interval.pdf"
     )
 
-    # 2. 生成基于 WIS 排名的绘图
+    # 2. 生成基于 IS 排名的绘图
     plot_point_forecast_with_interval(
         metrics_csv="./results/metrics_tables/point_metrics_long_real_sim.csv",
         horizon=4,
         metric_type="WIS80_mean",  # 注意：在 csv 里这个指标叫 WIS80_mean
-        out_path="./test_results/montages/all_countries_forecast_step4_WIS_Interval.png"
+        out_path="./test_results/montages/all_countries_forecast_step4_WIS_Interval.pdf"
     )

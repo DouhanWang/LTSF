@@ -29,8 +29,8 @@ PAPER_COLORS = {
 
     # 特殊模型：提高色彩的明度对比
     "TabPFN_ts_real": "#D81B60",  # 深洋红 (从粉色升级，极具辨识度)
-   "Respicast_real": "#B8860B",
-    "ensemble_real": "#7570B3",   # 皇家紫 (从浅紫升级，突出权威感)
+    "Respicast_real": "#B8860B",
+    "Ensemble_real": "#7570B3",   # 皇家紫 (从浅紫升级，突出权威感)
 }
 
 DEFAULT_COUNTRIES = [
@@ -50,7 +50,7 @@ DEFAULT_METHODS = [
     ("Autoformer_aug", "Autoformer (aug)"),
     ("Autoformer_comb", "Autoformer (comb)"),
     ("TabPFN_ts_real", "TabPFN-TS"),
-    ("ensemble_real", "Ensemble"),  # 修正：小写 e
+    ("Ensemble_real", "Ensemble"),  # 修正：小写 e
     ("Respicast_real", "RespiCast"),  # 修正：大写 R
 ]
 
@@ -102,10 +102,8 @@ def _coerce_dates(x):
 # 从 CSV 中分别读取 pred 和 true
 # ==========================================
 def _load_data_from_csv(run_dir: str, method_tag: str, horizon: int):
-    if "tabpfn" in method_tag.lower():
-        filename = f"tabpfn_ts_pred_step{int(horizon)}.csv"
-    else:
-        filename = f"rolling_pred_step{int(horizon)}.csv"
+
+    filename = f"rolling_pred_step{int(horizon)}.csv"
 
     p = os.path.join(run_dir, filename)
     if not os.path.exists(p):
@@ -236,19 +234,16 @@ def plot_relative_ae_grid_3x3(
             if m_pred is None:
                 continue
 
-            # 🔴 核心逻辑：如果模型缺少 True 值，借用 Naive 的 True 值（倒数截取对齐）
+# 🔴 核心逻辑：如果模型缺少 True 值，借用 Naive 的 True 值（根据绝对日期匹配！）
             if m_true is None:
-                n_pred = len(m_pred)
-                if len(base_true) >= n_pred:
-                    m_true = base_true[-n_pred:]
-
-                    # 🌟 新增这一行：强制丢弃 RespiCast 的原始日期
-                    # 从而在下一步 _align_by_dates 时，直接触发你写好的 "倒数对齐" 分支
-                    m_dates = None
-
+                if base_dates is not None and m_dates is not None:
+                    # 1. 建立 Naive 的 {日期字符串: 真实值} 字典
+                    base_true_dict = {str(d): val for d, val in zip(base_dates, base_true)}
+                    
+                    # 2. 严格拿着当前模型预测的日期去字典里取值
+                    m_true = np.array([base_true_dict.get(str(d), np.nan) for d in m_dates])
                 else:
-                    print(
-                        f"[warn] {country} {method_tag} pred长度({n_pred}) 超过 Naive true长度({len(base_true)})，跳过。")
+                    print(f"[warn] {country} {method_tag} 缺少 True 值且无法进行日期匹配，跳过。")
                     continue
 
             m_ae = np.abs(m_pred - m_true)
@@ -313,10 +308,10 @@ def plot_relative_ae_grid_3x3(
             )
         # 3. 坐标轴与背景
         ax.set_xscale('log', base=2)
-        x_ticks = [0.25, 0.5, 1.0, 2.0, 4.0]
+        x_ticks = [0.1, 0.25, 0.5, 1.0, 2.0, 4.0]
         ax.set_xticks(x_ticks)
         ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
-        ax.set_xlim(0.2, 5.0)
+        ax.set_xlim(0.1, 4.0)
 
         ax.axvline(1.0, linestyle="--", linewidth=1.2, color="#888888", alpha=0.8, zorder=0)
         ax.grid(axis="x", linestyle="-", linewidth=0.5, alpha=0.3)

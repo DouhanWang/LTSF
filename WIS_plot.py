@@ -26,7 +26,7 @@ DEFAULT_METHODS = [
     ("Autoformer_comb", "Autoformer (Comb)"),
     ("TabPFN_ts_real", "TabPFN-TS (Real)"),
     ("Respicast_real", "Respicast (Real)"),
-    ("ensemble_real", "Ensemble"),
+    ("Ensemble_real", "Ensemble"),
 ]
 
 # 给每个“方法族”分配一个 colormap（不同色系）
@@ -237,7 +237,7 @@ def plot_relative_wis_paper_all(
 ):
     """
     Generate 9 countries x 4 steps = 36 plots:
-      Relative WIS = WIS(method) / WIS(baseline_tag)
+      Relative IS = IS(method) / IS(baseline_tag)
     Using latest run folder for each (country, method_tag).
     Outliers disabled.
     """
@@ -380,10 +380,10 @@ def plot_relative_wis_paper_all(
             ax.spines["top"].set_visible(False)
             ax.spines["right"].set_visible(False)
 
-            ax.set_ylabel("Relative WIS (vs. Naive Real)")
+            ax.set_ylabel("Relative IS (vs. Naive Real)")
             ax.set_ylim(y0, y1)
             ax.margins(y=0.02)  # 可选：再留一点点空白
-            ax.set_title(f"{country}: Relative WIS ({h}-step ahead)")
+            ax.set_title(f"{country}: Relative IS ({h}-step ahead)")
 
             plt.setp(ax.get_xticklabels(), rotation=18, ha="right")
 
@@ -639,7 +639,7 @@ PAPER_COLORS = {
     # 特殊模型：提高色彩的明度对比
     "TabPFN_ts_real": "#D81B60",  # 深洋红 (从粉色升级，极具辨识度)
     "Respicast_real": "#B8860B",
-    "ensemble_real": "#7570B3",   # 皇家紫 (从浅紫升级，突出权威感)
+    "Ensemble_real": "#7570B3",   # 皇家紫 (从浅紫升级，突出权威感)
 }
 
 def get_paper_color(tag):
@@ -688,7 +688,7 @@ def plot_relative_wis_grid_3x3(
         ("Autoformer_aug", "Autoformer (aug)"),
         ("Autoformer_comb", "Autoformer (comb)"),
         ("TabPFN_ts_real", "TabPFN-TS"),
-        ("ensemble_real", "Ensemble"),  # 修正：小写 e
+        ("Ensemble_real", "Ensemble"),  # 修正：小写 e
         ("Respicast_real", "RespiCast"),  # 修正：大写 R
     ]
     # 反转列表，因为在常规 Y 轴中，坐标越大越靠上
@@ -828,7 +828,7 @@ def plot_relative_wis_grid_3x3(
 
         # 只有最下面一行显示 X 轴说明
         if r == 2:
-            ax.set_xlabel("Relative WIS (vs. Naive Real)", fontsize=14, color="#333333", labelpad=8)
+            ax.set_xlabel("Relative IS (vs. Naive Real)", fontsize=14, color="#333333", labelpad=8)
         else:
             ax.tick_params(axis='x', bottom=True, labelbottom=False)
 

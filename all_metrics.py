@@ -14,9 +14,22 @@ COUNTRIES = [
 ]
 COUNTRY_LOWER = {c.lower(): c for c in COUNTRIES}
 
-METHODS = ["Naive","ARIMA","DLinear","LSTM","Autoformer","TabPFN_ts","Respicast","Ensemble"]
-TRAIN_SETTINGS = ["real","augmented","combined"]
-STEPS = [1,2,3,4]
+# 把 Ensembleun 放在 Ensemble 前面！
+METHODS = ["Naive", "ARIMA", "DLinear", "LSTM", "Autoformer", "TabPFN_ts", "Respicast", "Ensembleun", "Ensemble"]
+TRAIN_SETTINGS = ["real", "augmented", "combined"]
+STEPS = [1, 2, 3, 4]
+
+# ==========================================
+# 强制时间窗口标尺 (保障评估绝对公平)
+# ==========================================
+NEW_DATES = [
+    "11/11/2024", "18/11/2024", "25/11/2024", "02/12/2024", "09/12/2024",
+    "16/12/2024", "23/12/2024", "30/12/2024", "06/01/2025", "13/01/2025",
+    "20/01/2025", "27/01/2025", "03/02/2025", "10/02/2025", "17/02/2025",
+    "24/02/2025", "03/03/2025", "10/03/2025", "17/03/2025", "24/03/2025",
+    "31/03/2025"
+]
+TARGET_LENGTHS = {1: 21, 2: 20, 3: 19, 4: 18}
 
 # ---------- Metrics 函数 ----------
 def mae(y, yhat):
@@ -34,28 +47,15 @@ def infer_dataset_type(path: Path) -> str:
 def infer_country_method_trainsetting(path: Path):
     s = str(path).lower()
     country = next((c for k, c in COUNTRY_LOWER.items() if k in s), None)
-    train_setting = next((t for t in TRAIN_SETTINGS if re.search(rf"(^|[^a-z]){t}([^a-z]|$)", s)), "")
-    
-    method = None
-    aliases = {
-        "tabpfn_ts": "TabPFN_ts", "tabpfn": "TabPFN_ts", "tabpfnts": "TabPFN_ts",
-        "autoformer": "Autoformer", "dlinear": "DLinear", "lstm": "LSTM",
-        "naive": "Naive", "arima": "ARIMA", "respicast": "Respicast",
-        "hubensemble": "Respicast", "ensemble": "Ensemble",
-    }
-    for key, val in aliases.items():
-        if key in s:
-            method = val
-            break
-
-    if method in ["Naive", "ARIMA", "TabPFN_ts", "Respicast", "Ensemble"]:
-        train_setting = ""
-        
+    method = next((m for m in METHODS if m.lower() in s), None)
+    train_setting = ""
+    if method in ["DLinear", "LSTM", "Autoformer"]:
+        train_setting = next((t for t in TRAIN_SETTINGS if re.search(rf"(^|[^a-z]){t}([^a-z]|$)", s)), "")
     return country, method, train_setting
 
 # ---------- 主程序 ----------
 def main():
-    print("🚀 开始生成统一评估指标 (MAE, wMAPE, WIS80)...")
+    print("🚀 开始生成绝对公平的统一评估指标 (MAE, wMAPE, WIS80)...")
     point_files = [(step, p) for step in STEPS for p in ROOT.rglob(f"*rolling_pred_step{step}.csv")]
 
     # 1. 建立以日期为索引的超级真实值字典 (date -> true_value)
@@ -69,7 +69,6 @@ def main():
             df = pd.read_csv(p)
             true_col = "true" if "true" in df.columns else ("TRUE" if "TRUE" in df.columns else None)
             if true_col and "date" in df.columns and df[true_col].notna().any():
-                # 【改动重点】：把非空的 true 连同 date 一起存成 Series，方便随时通过日期查询
                 valid_df = df.dropna(subset=[true_col])
                 dates = valid_df["date"].astype(str).str.strip().values
                 trues = pd.to_numeric(valid_df[true_col], errors="coerce").values
@@ -85,30 +84,35 @@ def main():
         country, method, train_setting = infer_country_method_trainsetting(p)
         if country is None or method is None: continue
 
+        # 【核心拦截】：获取当前 Step 必须评估的合法日期！
+        expected_len = TARGET_LENGTHS.get(step, 21)
+        expected_dates = set(NEW_DATES[-expected_len:])
+
         try:
             df = pd.read_csv(p)
             if "date" not in df.columns: continue
             
-            dates = df["date"].astype(str).str.strip().values
+            # 强行过滤！只保留在 expected_dates 范围内的预测数据
+            df["date_str"] = df["date"].astype(str).str.strip()
+            df = df[df["date_str"].isin(expected_dates)]
+            
+            dates = df["date_str"].values
             y_pred = pd.to_numeric(df["pred"], errors="coerce").values
             
             true_col = "true" if "true" in df.columns else ("TRUE" if "TRUE" in df.columns else None)
             if true_col and df[true_col].notna().any():
                 y_true = pd.to_numeric(df[true_col], errors="coerce").values
             else:
-                # 【改动重点】：不再检查长度！而是拿着预测数据的 date，去字典里精准匹配 true
                 ref_series = ref_true.get((dt, step, country), None)
                 if ref_series is not None:
                     y_true = np.array([ref_series.get(d, np.nan) for d in dates])
                 else:
                     y_true = np.array([np.nan] * len(y_pred))
 
-            # 剔除掉 NaN (无论是由于没预测还是由于没匹配上日期)
             valid = np.isfinite(y_pred) & np.isfinite(y_true)
             y_t = y_true[valid]
             y_p = y_pred[valid]
             
-            # 只要还有有效的配对数据，就计算误差！
             if len(y_t) > 0:
                 rows.append({
                     "dataset_type": dt, "country": country, "method": method,
@@ -125,7 +129,7 @@ def main():
         except Exception as e:
             print(f"[WARN] 处理 CSV 失败 {p}: {e}")
 
-    # 3. 直接读取完美长度的 WIS (.npy)
+    # 3. 读取 WIS (.npy)
     for step in STEPS:
         for p in ROOT.rglob(f"*wis80_point_step{step}.npy"):
             dt = infer_dataset_type(p)
@@ -155,7 +159,6 @@ def main():
     df_out.to_csv(OUT_PATH, index=False)
     print(f"\n🎉 [OK] 评估大表已生成！")
     print(f"📁 存储位置: {OUT_PATH}")
-    print(f"📊 总指标行数: {len(df_out)}")
 
 if __name__ == "__main__":
     main()

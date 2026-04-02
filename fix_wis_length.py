@@ -18,7 +18,7 @@ TARGET_LENGTHS = {
 
 def process_all_wis_npy():
     print("🚀 --- 开始统一处理 wis80_point npy 文件 ---")
-    stats = {"processed": 0, "skipped_ensemble": 0, "skipped_perfect": 0, "error": 0}
+    stats = {"processed": 0, "skipped_perfect": 0, "error": 0}
     
     # 匹配文件名提取 step (1, 2, 3, 4)
     step_re = re.compile(r"wis80_point_step(\d+)\.npy", re.IGNORECASE)
@@ -26,11 +26,6 @@ def process_all_wis_npy():
     for p in ROOT.rglob("wis80_point_step*.npy"):
         path_str = str(p).lower()
         
-        # 1. 排除 ensemble
-        if "ensemble" in path_str:
-            stats["skipped_ensemble"] += 1
-            continue
-            
         match = step_re.search(p.name)
         if not match:
             continue
@@ -68,7 +63,6 @@ def process_all_wis_npy():
     print("\n🎉 === 统一处理任务完成 === ")
     print(f"🔄 成功截断并覆盖的文件数: {stats['processed']}")
     print(f"✅ 原本长度就已完美的文件数: {stats['skipped_perfect']}")
-    print(f"⏭️ 因 Ensemble 被跳过的文件数: {stats['skipped_ensemble']}")
     
     if stats["error"] > 0:
         print(f"⚠️ 警告: 有 {stats['error']} 个文件报错或长度不足，请往上翻看终端输出。")
