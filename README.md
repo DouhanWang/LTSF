@@ -142,10 +142,8 @@ Use fix_column_names_preds.py to fix column names for all prediction files and u
 Use Ensemble.py to get pred of ensemble of our models and recompute_Respicast_or_ensemble_wis.py to compute wis80 for the ensemble.
 
 Use all_metrics.py to compute csv for all metrics and make_metrics_tables_latex.py to get a latex table.
-Combine plots using stitch_montages.py
-```
-python stitch_montages.py --repo_root . --countries Belgium Czechia Denmark France Ireland Italy Netherlands Poland Romania --models Naive ARIMA DLinear LSTM Autoformer TabPFN_ts
-```
+
+Use draw_forecast.py to get point forecast for all countries for all steps, use draw_forecast_best_model.py to get point forecast for Respicast and our best model, use WIS_plot.py and rAE_plot.py to get plots for relative IS and rAE.
 
 
 
