@@ -15,7 +15,7 @@ COUNTRIES = [
 COUNTRY_LOWER = {c.lower(): c for c in COUNTRIES}
 
 # 把 Ensembleun 放在 Ensemble 前面！
-METHODS = ["Naive", "ARIMA", "DLinear", "LSTM", "Autoformer", "TabPFN_ts", "Respicast", "Ensembleun", "Ensemble"]
+METHODS = ["Naive", "ARIMA", "DLinear", "LSTM", "Autoformer", "TabPFN_ts", "Respicast", "Ensemble"]
 TRAIN_SETTINGS = ["real", "augmented", "combined"]
 STEPS = [1, 2, 3, 4]
 

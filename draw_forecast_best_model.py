@@ -30,15 +30,23 @@ DEFAULT_COUNTRIES = [
 ]
 
 COUNTRY_YLIM = {
-    "Belgium": (0, 2000), "Czechia": (0, 500), "Denmark": (0, 500),
-    "France": (0, 1200), "Ireland": (0, 200), "Italy": (0, 3000),
-    "Netherlands": (0, 250), "Poland": (0, 2000), "Romania": (0, 100),
+    "Belgium": (0, 1600),
+    "Czechia": (0, 350),
+    "Denmark": (0, 400),
+    "France": (0, 800),
+    "Ireland": (0, 150),
+    "Italy": (0, 2500),
+    "Netherlands": (0, 200),
+    "Poland": (0, 1000),
+    "Romania": (0, 70),
 }
+
+TARGET_LENGTHS = {1: 21, 2: 20, 3: 19, 4: 18}
 
 def _paper_style_rcparams():
     plt.rcParams.update({
-        "font.size": 11, "axes.titlesize": 12.5, "axes.labelsize": 11.5,
-        "xtick.labelsize": 10.5, "ytick.labelsize": 10.5, "axes.linewidth": 1.0,
+        "font.size": 13, "axes.titlesize": 12.5, "axes.labelsize": 12.5,
+        "xtick.labelsize": 12.5, "ytick.labelsize": 12.5, "axes.linewidth": 1.0,
     })
 
 def get_model_identity(method, setting):
@@ -84,7 +92,7 @@ def get_csv_path_from_row(row, horizon):
         
     return csv_path
 
-def load_true_from_csv(csv_path, last_n=24):
+def load_true_from_csv(csv_path, last_n=25):
     p = Path(str(csv_path).replace("\\", "/"))
     if not p.exists(): return None, None
     df = pd.read_csv(p)
@@ -107,18 +115,19 @@ def load_true_from_csv(csv_path, last_n=24):
     
     return t_vals[-last_n:], d_vals[-last_n:]
 
-def load_pred_from_csv(csv_path, last_n=17):
+def load_pred_from_csv(csv_path, last_n=18):
     p = Path(str(csv_path).replace("\\", "/"))
     if not p.exists(): return None, None, None
 
     df = pd.read_csv(p)
+
     cols = {c.lower(): c for c in df.columns}
     
     pcol = next((cols[k] for k in ["pred", "y_pred", "forecast", "target", "0.5"] if k in cols), None)
     if not pcol: return None, None, None
     
     p_vals = pd.to_numeric(df[pcol], errors='coerce').values
-    
+
     lcol = next((cols[k] for k in cols if "lower" in k or "lo" in k or "0.1" in k), None)
     ucol = next((cols[k] for k in cols if "upper" in k or "hi" in k or "0.9" in k), None)
     
@@ -130,6 +139,7 @@ def load_pred_from_csv(csv_path, last_n=17):
     end_idx = valids[-1] + 1 
     
     p_vals = p_vals[:end_idx]
+
     if l_vals is not None: l_vals = l_vals[:end_idx]
     if u_vals is not None: u_vals = u_vals[:end_idx]
     
@@ -182,20 +192,22 @@ def plot_point_forecast_with_interval(
         if naive_row.empty:
             ax.set_title(f"{country} (No Naive GT)", loc="left")
             continue
-            
+
+        pred_len = TARGET_LENGTHS.get(int(horizon), 18)
         gt_path = get_csv_path_from_row(naive_row.iloc[0], horizon)
-        plot_true, plot_dates = load_true_from_csv(gt_path, last_n=24)
+        plot_true, plot_dates = load_true_from_csv(gt_path, last_n=25)
         
         if plot_true is None:
             ax.set_title(f"{country} (GT Read Failed)", loc="left")
             continue
             
         len_t = len(plot_true)
+
         x_true = np.arange(len_t)
         
         ax.plot(x_true, plot_true, color="black", marker='o', markersize=3.5, alpha=0.9, linestyle="None", zorder=50)
-        if len_t > 4:
-            ax.axvline(x=4, color='gray', linestyle=':', linewidth=1.5, alpha=0.8, zorder=49)
+
+        ax.axvline(x=3, color='gray', linestyle=':', linewidth=1.5, alpha=0.8, zorder=49)
 
         # ----------------------------------------------------
         # 2. 查表找最好模型
@@ -223,7 +235,7 @@ def plot_point_forecast_with_interval(
             
             csv_path = get_csv_path_from_row(row, horizon)
             
-            p_17, l_17, u_17 = load_pred_from_csv(csv_path, last_n=17)
+            p_17, l_17, u_17 = load_pred_from_csv(csv_path, last_n=18)
             if p_17 is None:
                 continue
                 
@@ -254,24 +266,30 @@ def plot_point_forecast_with_interval(
             except:
                 formatted_dates.append(raw_str[:7])
                 
-        ax.set_xticklabels(formatted_dates, rotation=25, ha="right")
-
-        ax.set_xlim(-0.5, 23.5)
+        ax.set_xlim(-0.5, len_t - 0.5)
         ax.set_title(f"{country}", loc="left", fontsize=13, fontweight="bold")
         if country in COUNTRY_YLIM: ax.set_ylim(COUNTRY_YLIM[country])
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         
         r, c = divmod(idx, 3)
-        if c == 0: ax.set_ylabel("Incidence", fontsize=11)
-        if r == 2: ax.set_xlabel("Date", fontsize=11)
+        if c == 0: 
+            ax.set_ylabel("Incidence", fontsize=13)
+            
+        # 【核心修改】：只在最后一行 (r == 2) 显示 X 轴标签和 Date 标题
+        if r == 2: 
+            ax.set_xticklabels(formatted_dates, rotation=25, ha="right")
+            ax.set_xlabel("Date", fontsize=13)
+        else:
+            ax.set_xticklabels([])  # 隐藏其他行的文字标签
+            ax.tick_params(axis='x', bottom=True, labelbottom=False) # 保留短刻度线，但不显示文字
 
     # ----------------------------------------------------
     # 5. 全局图例
     # ----------------------------------------------------
     legend_elements = [
         mlines.Line2D([], [], color='black', marker='o', markersize=4, linestyle='None', label='True Data'),
-        mlines.Line2D([], [], color='gray', linestyle=':', linewidth=1.5, label='Split')
+        mlines.Line2D([], [], color='gray', linestyle=':', linewidth=2, label='Split')
     ]
     
     order_list = [

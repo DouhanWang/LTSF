@@ -1,3 +1,5 @@
+import os
+import matplotlib as mpl
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -84,262 +86,81 @@ class StandardScaler():
         return (data * self.std) + self.mean
 
 
-# def visual(true, preds=None, name='./pic/test.pdf'):
-#     """
-#     Results visualization
-#     """
-#     plt.figure()
-#     plt.plot(true, label='GroundTruth', linewidth=2)
-#     if preds is not None:
-#         plt.plot(preds, label='Prediction', linewidth=2)
-#     plt.legend()
-#     plt.savefig(name, bbox_inches='tight')
-
-
-# def visual(true, preds, path, lower=None, upper=None, seq_len=None):
-#     plt.figure(figsize=(10, 6))
-#
-#     # --- Find the prediction start index ---
-#     if seq_len is None:
-#         # Fallback if seq_len is not provided
-#         pred_start_idx = len(true) // 2
-#     else:
-#         pred_start_idx = seq_len  # This is the correct history length (e.g., 4)
-#
-#     # --- Plot the main lines ---
-#     plt.plot(true, label='GroundTruth', color='black')
-#     plt.plot(preds, label='Prediction (Median)', color='blue')
-#
-#     # --- Plot the uncertainty band ---
-#     if lower is not None and upper is not None:
-#         plt.fill_between(
-#             x=range(pred_start_idx, len(true)),  # X-axis range (e.g., from 4 to 8)
-#             y1=lower[pred_start_idx:],  # Lower bound
-#             y2=upper[pred_start_idx:],  # Upper bound
-#             color='lightblue',
-#             alpha=0.5,
-#             label='95% Prediction Interval'
-#         )
-#
-#
-#     plt.axvline(x=pred_start_idx - 1, color='red', linestyle='--', label='Forecast Start')
-#
-#     # --- 2. Add Axis Labels ---
-#     plt.xlabel('Time Step')
-#     plt.ylabel('Incidenza')
-#
-#     plt.legend()
-#     plt.savefig(path)
-#     plt.close()
-
-def visual(true, preds, path, lower=None, upper=None, seq_len=None,paper=False, show_xlabel=True, show_ylabel=True, show_xticklabels=True, show_yticklabels=True, ylim=None):
+def visual(true, preds=None, name='./pic/test.pdf', lower=None, upper=None, seq_len=4,
+           paper=True, show_xticklabels=True, show_yticklabels=True,
+           show_xlabel=True, show_ylabel=True, ylim=None,
+           pred_color='#ff7f0e', pred_label='Prediction'):
     """
-    SAME calling as before.
-    If true/preds/lower/upper are pandas Series with DatetimeIndex,
-    x-axis will be exact dates; otherwise fallback to 0,1,2,...
-    Produces line plot + shaded confidence interval.
+    Results visualization
     """
-
-    # ---- helper to get x-axis ----
-    def extract_x(x):
-        if isinstance(x, pd.Series) and isinstance(x.index, pd.DatetimeIndex):
-            return x.index.to_pydatetime()
-        return None
-
-    x_dates = extract_x(true)
-    if x_dates is None:
-        x_dates = extract_x(preds)
-    if x_dates is None and lower is not None:
-        x_dates = extract_x(lower)
-    if x_dates is None and upper is not None:
-        x_dates = extract_x(upper)
-
-    # ---- values ----
-    def to_vals(x):
-        if x is None:
-            return None
-        if isinstance(x, pd.Series):
-            return x.values.astype(float)
-        return np.asarray(x, dtype=float)
-
-    true_vals = to_vals(true)
-    pred_vals = to_vals(preds)
-    lower_vals = to_vals(lower)
-    upper_vals = to_vals(upper)
-
-    n_true = len(true_vals)
-
-    # ---- forecast start ----
-    pred_start_idx = (n_true // 2) if seq_len is None else int(seq_len)
-    pred_start_idx = max(1, min(pred_start_idx, n_true))  # safety
-
-    # ---- x axis ----
-    if x_dates is None:
-        x_true = np.arange(n_true)
-    else:
-        x_true = np.asarray(x_dates)
-        # try to regularize irregular datetime ticks (optional)
-        try:
-            x_dt = pd.to_datetime(x_true)
-            if len(x_dt) >= 2:
-                diffs = (x_dt[1:] - x_dt[:-1])
-                step = pd.Series(diffs).mode().iloc[0]  # most common timedelta
-                if not (diffs == step).all():
-                    regular_range = pd.date_range(start=x_dt[0], periods=n_true, freq=step)
-                    x_true = regular_range.to_pydatetime()
-        except Exception:
-            x_true = np.asarray(x_dates)
-
-    # ---- align preds/bounds to future ----
-    # Case A: pred_vals is same length as true (full series with future embedded)
-    if len(pred_vals) == n_true:
-        x_pred = x_true[pred_start_idx:]
-        y_pred = pred_vals[pred_start_idx:]
-        if lower_vals is not None and upper_vals is not None and len(lower_vals) == n_true and len(upper_vals) == n_true:
-            lower_vals = lower_vals[pred_start_idx:]
-            upper_vals = upper_vals[pred_start_idx:]
-        else:
-            # if bounds shape doesn't match, disable shading
-            lower_vals, upper_vals = None, None
-    else:
-        # Case B: pred_vals is only the forecast horizon
-        x_pred = x_true[pred_start_idx: pred_start_idx + len(pred_vals)]
-        y_pred = pred_vals
-        # bounds should match forecast horizon length if provided
-        if lower_vals is not None and upper_vals is not None:
-            if len(lower_vals) != len(y_pred) or len(upper_vals) != len(y_pred):
-                lower_vals, upper_vals = None, None
-
-    # ---- plotting ----
-    plt.figure(figsize=(10, 6))
-    ax = plt.gca()
-
-
-
-    # --- y-limits (optional) ---
-    if ylim is not None:
-        ax.set_ylim(ylim[0], ylim[1])
-
-    # --- paper mode: cleaner axes ---
     if paper:
-        ax.tick_params(axis="both", labelsize=12)
-        # fewer y ticks
-        ax.yaxis.set_major_locator(MaxNLocator(nbins=4))
-        # fewer x ticks (dates)
-        if x_dates is not None:
-            locator = mdates.AutoDateLocator(minticks=3, maxticks=4)
-            ax.xaxis.set_major_locator(locator)
-            ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
-        else:
-            ax.xaxis.set_major_locator(MaxNLocator(nbins=4))
+        plt.rcParams.update({
+            "font.size": 13,
+            "axes.titlesize": 13,
+            "axes.labelsize": 13,
+            "xtick.labelsize": 12,
+            "ytick.labelsize": 12,
+            "axes.linewidth": 1.0,
+            "pdf.fonttype": 42,
+            "ps.fonttype": 42,
+        })
+    else:
+        plt.rc('font', family='serif')
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    
+    len_t = len(true)
+    x_true = np.arange(len_t)
+    
+    # Draw Ground Truth
+    ax.plot(x_true, true, label='GroundTruth', color='black', marker='o', markersize=3.5, alpha=0.9, linestyle='None', zorder=50)
 
 
-    # clean style
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.grid(False)
-    axis_color = "#2B2B2B"
-    for side in ["bottom", "left"]:
-        ax.spines[side].set_linewidth(1.4)
-        ax.spines[side].set_color(axis_color)
+    ax.axvline(x=3, color='gray', linestyle=':', linewidth=1.5, alpha=0.8, zorder=49)
 
-    ax.tick_params(axis="both", which="major", colors=axis_color, length=4, width=1.0, labelsize=18)
-    # ground truth: line + small markers
-    # ax.plot(
-    #     x_true,
-    #     true_vals,
-    #     "-",
-    #     color="black",
-    #     linewidth=2.0,
-    #     label="Ground Truth",
-    #     zorder=3
-    # )
-    ax.scatter(
-        x_true,
-        true_vals,
-        color="black",
-        label="Ground Truth",
-        s=16,
-        zorder=4
-    )
+    # Draw Prediction
+    if preds is not None:
+        len_p = len(preds)
+        x_pred = np.arange(len_t - len_p, len_t)
+        
+        ax.plot(x_pred, preds, label=pred_label, linewidth=1.5, color=pred_color, zorder=20)
+        
+        # Draw confidence intervals if provided
+        if lower is not None and upper is not None:
+            ax.fill_between(x_pred, lower, upper, color=pred_color, alpha=0.2, zorder=10)
 
-    # prediction: line + small markers (future only)
-    pred_color = '#2E6F4E' # dark blue "#1F4E79"
+    # Spines style
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_color('#333333')
+    ax.spines['bottom'].set_color('#333333')
+    
+    # Tick logic
+    if show_xticklabels:
+        ax.tick_params(axis='x', colors='#333333', bottom=True, labelbottom=True)
+    else:
+        ax.tick_params(axis='x', colors='#333333', bottom=True, labelbottom=False)
 
-    ax.plot(x_pred, y_pred, "-", color=pred_color, linewidth=2.2, zorder=4)
+    if show_yticklabels:
+        ax.tick_params(axis='y', colors='#333333', left=True, labelleft=True)
+    else:
+        ax.tick_params(axis='y', colors='#333333', left=True, labelleft=False)
 
+    # Axis labels
+    if show_xlabel:
+        ax.set_xlabel('Date', fontsize=13, color='#333333')
+    if show_ylabel:
+        ax.set_ylabel('Incidence', fontsize=13, color='#333333')
+        
+    if ylim is not None:
+        ax.set_ylim(ylim)
 
-    # ax.scatter(
-    #     x_pred,
-    #     y_pred,
-    #     color="#2ca02c",
-    #     s=16,
-    #     zorder=5
-    # )
+    # Force show Legend for every plot
+    ax.legend(loc='best', frameon=True, fontsize=10, facecolor='white', framealpha=0.85)
 
-    # shaded confidence interval
-    if lower_vals is not None and upper_vals is not None:
-        # keep bounds consistent with mean
-        lower_adj = np.minimum(lower_vals, y_pred)
-        upper_adj = np.maximum(upper_vals, y_pred)
-
-        mask = np.isfinite(lower_adj) & np.isfinite(upper_adj) & np.isfinite(y_pred)
-        if mask.any():
-            ax.fill_between(
-                np.asarray(x_pred)[mask],
-                lower_adj[mask],
-                upper_adj[mask],
-                color=pred_color,
-                alpha=0.18,
-                linewidth=0,
-                zorder=2
-            )
-
-    # split line at last history date
-    split_x = x_true[pred_start_idx - 1]
-    split_color = "#8C8C8C"
-    ax.axvline(
-        split_x,
-        color=split_color,
-        linestyle=(0, (3, 3)),
-        linewidth=1.0,
-        alpha=0.9,
-        zorder=1
-    )
-
-    ax.set_xlabel("Date" if x_dates is not None else "Time Step", fontsize=20)
-    ax.set_ylabel("Incidence", fontsize=20)
-
-    # de-duplicate legend labels (optional but helps)
-    handles, labels = ax.get_legend_handles_labels()
-    uniq = {}
-    for h, l in zip(handles, labels):
-        if l not in uniq:
-            uniq[l] = h
-    # ax.legend(
-    #     list(uniq.values()), list(uniq.keys()),
-    #     frameon=False,
-    #     loc="center left",
-    #     bbox_to_anchor=(1.02, 0.5),  # ✅ legend to the right
-    #     borderaxespad=0.0
-    # )
     plt.tight_layout()
-
-    # x tick formatting for dates
-    if x_dates is not None:
-        # Don't force ticks at every point (too crowded). Let matplotlib choose.
-        plt.gcf().autofmt_xdate(rotation=30, ha="right")
-    # --- axis labels / tick labels toggles ---
-    if not show_xlabel:
-        ax.set_xlabel("")
-    if not show_ylabel:
-        ax.set_ylabel("")
-
-    if not show_xticklabels:
-        ax.set_xticklabels([])
-    if not show_yticklabels:
-        ax.set_yticklabels([])
-    plt.savefig(path, dpi=300, bbox_inches="tight")
+    os.makedirs(os.path.dirname(name), exist_ok=True)
+    plt.savefig(name, bbox_inches='tight', dpi=800)
     plt.close()
 
 

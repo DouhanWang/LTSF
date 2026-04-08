@@ -1,430 +1,198 @@
+import os
 import re
 from pathlib import Path
-
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
-from utils.tools import visual
+# -----------------------------
+# 1. 核心配置
+# -----------------------------
+COUNTRIES = ["Belgium", "Czechia", "Denmark", "France", "Ireland", "Italy", "Netherlands", "Poland", "Romania"]
+
+GRID_LAYOUT = [
+    ["ARIMA_real",      "TabPFN_ts_real",       "Respicast_real"],
+    ["DLinear_real",    "DLinear_augmented",    "DLinear_combined"],
+    ["LSTM_real",       "LSTM_augmented",       "LSTM_combined"],
+    ["Autoformer_real", "Autoformer_augmented", "Autoformer_combined"]
+]
+
+# 严格按照你要求的预测长度
+TARGET_LENGTHS = {1: 21, 2: 20, 3: 19, 4: 18} 
 
 COUNTRY_YLIM = {
-    "Belgium": (0, 2000),
-    "Czechia": (0, 400),
-    "Denmark": (0, 500),
-    "France": (0, 1000),
-    "Ireland": (0, 120),
-    "Italy": (0, 2500),
-    "Netherlands": (0, 200),
-    "Poland": (0, 1400),
-    "Romania": (0, 100),
+    "Belgium": (0, 2000), "Czechia": (0, 450), "Denmark": (0, 500),
+    "France": (0, 1200), "Ireland": (0, 200), "Italy": (0, 3000),
+    "Netherlands": (0, 300), "Poland": (0, 1800), "Romania": (0, 100),
 }
-# -----------------------------
-# Helpers
-# -----------------------------
-def pick_date_col(df: pd.DataFrame):
-    for c in ["date", "Date", "timestamp", "ds", "time"]:
-        if c in df.columns:
-            return c
-    return None
 
+PAPER_COLORS = {
+    "ARIMA_real": "#636363",      
+    "DLinear_real": "#6BAED6",    "DLinear_augmented": "#3182BD", "DLinear_combined": "#08519C",  
+    "LSTM_real": "#74C476",       "LSTM_augmented": "#31A354",   "LSTM_combined": "#006D2C",   
+    "Autoformer_real": "#FD8D3C", "Autoformer_augmented": "#E6550D", "Autoformer_combined": "#A63603",  
+    "TabPFN_ts_real": "#D81B60",  "Respicast_real": "#B8860B",  "Naive_real": "#9E9E9E",
+    "default": "#2B2B2B"
+}
 
-def axis_flags_for_paper(model: str, split: str):
-    m = str(model).strip().lower()
-    s = str(split).strip().lower()
-    # ✅ simulated 专用：Naive/DLinear/Autoformer 显示 y 轴；Autoformer/TabPFN 显示 x 轴
-    if s == "simulated":
-        show_yticks = m in {"naive", "dlinear", "autoformer"}
-        show_xticks = m in {"autoformer", "tabpfn_ts"}
-        show_ylabel = show_yticks
-        show_xlabel = show_xticks
-        return show_yticks, show_xticks, show_ylabel, show_xlabel
-    # top strip real-only: only ARIMA_real shows y-axis ticks+label
-    if m in {"arima", "tabpfn_ts", "Respicast", "naive"}:
-        show_yticks = (m == "arima" and s == "real")
-        show_xticks = False
-        show_ylabel = show_yticks     # ✅ y label 跟着 y ticks
-        show_xlabel = False
-        return show_yticks, show_xticks, show_ylabel, show_xlabel
+def set_paper_style():
+    plt.rcParams.update({
+        "font.size": 12, "axes.titlesize": 13, "axes.labelsize": 12,
+        "xtick.labelsize": 11, "ytick.labelsize": 11,
+        "pdf.fonttype": 42, "ps.fonttype": 42,
+    })
 
-    # 3x3 block: y only left col (DLinear), x only bottom row (combined)
-    show_yticks = (m == "dlinear")
-    show_xticks = (s == "combined")
-    show_ylabel = show_yticks        # ✅ 左列三张都有 Incidence
-    show_xlabel = show_xticks        # ✅ 底行三张都有 Date
-    return show_yticks, show_xticks, show_ylabel, show_xlabel
+def get_model_style(prefix):
+    m_name = prefix.split('_')[0]
+    display_names = {"TabPFN": "TabPFN-TS", "Respicast": "RespiCast"}
+    m_disp = display_names.get(m_name, m_name)
+    
+    if "_real" in prefix: label = m_disp
+    elif "_augmented" in prefix: label = f"{m_disp} (aug)"
+    elif "_combined" in prefix: label = f"{m_disp} (comb)"
+    else: label = m_disp
+    
+    return PAPER_COLORS.get(prefix, PAPER_COLORS["default"]), label
 
-
-def ensure_datetime_series(df: pd.DataFrame) -> pd.Series:
-    """
-    Return a datetime Series from df.
-    Supports:
-      - a single date-like column (date/timestamp/...)
-      - anno + settimana (ISO week -> Monday)
-    """
-    date_col = pick_date_col(df)
-    if date_col is not None:
-        return pd.to_datetime(df[date_col])
-
-    if ("anno" in df.columns) and ("settimana" in df.columns):
-        yy = df["anno"].astype(int).to_numpy()
-        ww = df["settimana"].astype(int).to_numpy()
-        dates = [pd.Timestamp.fromisocalendar(int(y), int(w), 1) for y, w in zip(yy, ww)]
-        return pd.to_datetime(pd.Series(dates))
-
-    raise ValueError(
-        f"No date column found. Expected date/timestamp/etc OR anno+settimana. "
-        f"Found columns: {list(df.columns)}"
-    )
-
-
-def find_step_csv(folder: Path, k: int):
-    # accept: step1.csv / step_1.csv / rolling_pred_step1.csv / tabpfn_ts_pred_step1.csv ...
-    pats = [f"*step{k}*.csv", f"*step_{k}*.csv"]
-    hits = []
-    for pat in pats:
-        hits += list(folder.glob(pat))
-    hits = sorted(set(hits))
-    return hits[0] if hits else None
-
-
-def parse_model_data_country(folder_name: str):
-    """
-    folder_name examples:
-      TabPFN_ts_real_Belgium_ILI
-      TabPFN_ts_simulated_Italy_ILI_median
-      DLinear_real_Ireland_ILI
-      Respicast_real_Poland_ILI
-      ARIMA_simulated_Poland_ILI_median
-      Autoformer_augmented_France_ILI
-    Return (model, split, data_str, country)
-    """
-    if folder_name.startswith("TabPFN_ts_"):
-        model = "TabPFN_ts"
-        data_str = folder_name[len("TabPFN_ts_") :]
-    else:
-        if "_" not in folder_name:
-            return folder_name, None, None, None
-        model, data_str = folder_name.split("_", 1)
-
-    m = re.match(r"^(real|simulated|augmented|combined)_(.+?)_ILI", data_str)
-    split = m.group(1) if m else None
-    country = m.group(2) if m else None
-    return model, split, data_str, country
-
-
-def to_series(vals, idx: pd.DatetimeIndex):
-    if vals is None:
-        return None
-    arr = np.asarray(vals, dtype=float)
-    return pd.Series(arr, index=idx)
-
-
-def call_visual(true_s, pred_s, save_path: Path, *, lower_s=None, upper_s=None, seq_len=4,
-                paper=True,
-                show_xticks=True, show_yticks=True,
-                show_xlabel=True, show_ylabel=True,
-                ylim=None):
-    """
-    show_xticks/show_yticks: 控制刻度文本（日期/数字）
-    show_xlabel/show_ylabel: 控制轴名称（Date/Incidence）
-    """
-    kwargs = dict(lower=lower_s, upper=upper_s, seq_len=seq_len)
-
+def fetch_ground_truth_series(results_dir: Path, country: str, step: int):
+    naive_folder = f"Naive_real_{country}_ILI"
+    csv_path = results_dir / naive_folder / f"rolling_pred_step{step}.csv"
+    if not csv_path.exists():
+        csv_path = results_dir / naive_folder / f"rolling_pred_step_{step}.csv"
+    if not csv_path.exists(): return None
+    
     try:
-        return visual(
-            true_s, pred_s, str(save_path),
-            **kwargs,
-            paper=paper,
-            show_xticklabels=show_xticks,
-            show_yticklabels=show_yticks,
-            show_xlabel=show_xlabel,
-            show_ylabel=show_ylabel,
-            ylim=ylim
-        )
-    except TypeError:
-        return visual(true_s, pred_s, str(save_path), **kwargs)
-
-
-# -----------------------------
-# TabPFN pipeline
-# -----------------------------
-def load_dataset_real_last25(dataset_dir: Path, country: str, last_n: int = 25):
-    path = dataset_dir / f"real_{country}_ILI.csv"
-    if not path.exists():
-        raise FileNotFoundError(f"Missing: {path}")
-
-    df = pd.read_csv(path)
-    dates = ensure_datetime_series(df)
-    if "incidenza" not in df.columns:
-        raise ValueError(f"'incidenza' not found in {path.name}. cols={list(df.columns)}")
-
-    df["_date"] = dates
-    df = df.tail(last_n).copy()
-
-    idx = pd.DatetimeIndex(pd.to_datetime(df["_date"]))
-    y_true = df["incidenza"].astype(float).to_numpy()
-    return idx, y_true
-
-
-def load_tabpfn_pred_last25(tabpfn_folder: Path, k: int, last_n: int = 25):
-    p = tabpfn_folder / f"tabpfn_ts_pred_step{k}.csv"
-    if not p.exists():
-        p2 = tabpfn_folder / f"tabpfn_ts_pred_step_{k}.csv"
-        if p2.exists():
-            p = p2
-        else:
-            raise FileNotFoundError(f"Missing TabPFN pred file: {p}")
-
-    df = pd.read_csv(p)
-    dates = ensure_datetime_series(df)
-    df["_date"] = dates
-    df = df.tail(last_n).copy()
-
-    def pick(cands):
-        for c in cands:
-            if c in df.columns:
-                return c
-        return None
-
-    med = pick(["0.5", "q0.5", "p50", "median"])
-    lo = pick(["0.1", "q0.1", "p10"])
-    hi = pick(["0.9", "q0.9", "p90"])
-    if med is None:
-        raise ValueError(f"No median col in {p.name}. cols={list(df.columns)}")
-
-    y_pred = df[med].astype(float).to_numpy()
-    lower = df[lo].astype(float).to_numpy() if lo else None
-    upper = df[hi].astype(float).to_numpy() if hi else None
-    return y_pred, lower, upper
-
-
-def draw_tabpfn(results_folder: Path, dataset_dir: Path, out_root: Path, country: str,
-               split: str = "real", last_n: int = 25, seq_len: int = 4):
-    out_root.mkdir(parents=True, exist_ok=True)
-
-    idx, y_true = load_dataset_real_last25(dataset_dir, country, last_n=last_n)
-    true_s = to_series(y_true, idx)
-
-    # TabPFN pred only on future part
-    idx_pred = idx[int(seq_len):]  # 25-4=21
-
-
-    for k in [1, 2, 3, 4]:
-        y_pred, lower, upper = load_tabpfn_pred_last25(results_folder, k, last_n=last_n)
-
-        y_pred = np.asarray(y_pred, dtype=float)
-        if len(y_pred) == len(idx):
-            y_pred = y_pred[int(seq_len):]
-        elif len(y_pred) != len(idx_pred):
-            raise ValueError(f"TabPFN step{k}: pred length {len(y_pred)} != expected {len(idx_pred)}")
-
-        pred_s = pd.Series(y_pred, index=idx_pred)
-
-        lower_s = None
-        upper_s = None
-        if lower is not None and upper is not None:
-            lo = np.asarray(lower, dtype=float)
-            hi = np.asarray(upper, dtype=float)
-            if len(lo) == len(idx):
-                lo = lo[int(seq_len):]
-                hi = hi[int(seq_len):]
-            if len(lo) == len(idx_pred) and len(hi) == len(idx_pred):
-                lower_s = pd.Series(lo, index=idx_pred)
-                upper_s = pd.Series(hi, index=idx_pred)
-
-        save_path = out_root / f"rolling_test_step{k}.png"
-        show_yticks, show_xticks, show_ylabel, show_xlabel = axis_flags_for_paper("TabPFN_ts", split)
-        ylim = COUNTRY_YLIM.get(country)
-        call_visual(
-            true_s, pred_s, save_path,
-            lower_s=lower_s, upper_s=upper_s, seq_len=seq_len,
-            paper=False,
-            show_xticks=show_xticks, show_yticks=show_yticks,
-            show_xlabel=show_xlabel, show_ylabel=show_ylabel,
-            ylim=ylim
-        )
-        print(f"[OK] {save_path}")
-
-
-# -----------------------------
-# Respicast pipeline (real-only top strip)
-# -----------------------------
-def load_respicast_pred_last25(respicast_folder: Path, k: int, last_n: int = 25):
-    p = respicast_folder / f"rolling_pred_step{k}.csv"
-    if not p.exists():
-        p2 = respicast_folder / f"rolling_pred_step_{k}.csv"
-        if p2.exists():
-            p = p2
-        else:
-            raise FileNotFoundError(f"Missing Respicast pred file: {p}")
-
-    df = pd.read_csv(p)
-    dates = ensure_datetime_series(df)
-    df["_date"] = dates
-    df = df.sort_values("_date").tail(last_n).copy()
-
-    if "target" not in df.columns:
-        raise ValueError(f"No 'target' col in {p.name}. cols={list(df.columns)}")
-
-    y_pred = df["target"].astype(float).to_numpy()
-    lower = df["lower80"].astype(float).to_numpy() if "lower80" in df.columns else None
-    upper = df["upper80"].astype(float).to_numpy() if "upper80" in df.columns else None
-
-    idx_pred = pd.DatetimeIndex(pd.to_datetime(df["_date"]))
-    return idx_pred, y_pred, lower, upper
-
-
-def draw_respicast(results_folder: Path, dataset_dir: Path, out_root: Path, country: str,
-                  split: str = "real", last_n: int = 25, seq_len: int = 4):
-    out_root.mkdir(parents=True, exist_ok=True)
-
-    idx_true, y_true = load_dataset_real_last25(dataset_dir, country, last_n=last_n)
-    true_s = to_series(y_true, idx_true)
-
-
-    for k in [1, 2, 3, 4]:
-        idx_pred, y_pred, lower, upper = load_respicast_pred_last25(results_folder, k, last_n=last_n)
-
-        pred_s = pd.Series(np.asarray(y_pred, dtype=float), index=idx_pred)
-        lower_s = pd.Series(lower, index=idx_pred) if lower is not None else None
-        upper_s = pd.Series(upper, index=idx_pred) if upper is not None else None
-
-        save_path = out_root / f"rolling_test_step{k}.png"
-        show_yticks, show_xticks, show_ylabel, show_xlabel = axis_flags_for_paper("Respicast", split)
-        ylim = COUNTRY_YLIM.get(country)
-        call_visual(
-            true_s, pred_s, save_path,
-            lower_s=lower_s, upper_s=upper_s, seq_len=seq_len,
-            paper=False,
-            show_xticks=show_xticks, show_yticks=show_yticks,
-            show_xlabel=show_xlabel, show_ylabel=show_ylabel,
-            ylim=ylim
-        )
-        print(f"[OK] {save_path}")
-
-
-# -----------------------------
-# Generic pipeline
-# -----------------------------
-def pick_true_col(df: pd.DataFrame):
-    for c in ["true", "y_true", "label", "gt", "incidenza"]:
-        if c in df.columns:
-            return c
-    return None
-
-
-def pick_pred_col(df: pd.DataFrame, k: int):
-    cands = [f"pred_step{k}", f"y_pred_step{k}", f"pred{k}", f"step{k}",
-             "pred", "y_pred", "mean", "mu"]
-    for c in cands:
-        if c in df.columns:
-            return c
-    for c in ["0.5", "q0.5", "p50", "median"]:
-        if c in df.columns:
-            return c
-    return None
-
-
-def pick_interval_cols(df: pd.DataFrame, k: int):
-    lows = [f"lower80_step{k}", f"lo80_step{k}", f"lower_step{k}", f"lower{k}", "lower", "lo"]
-    ups  = [f"upper80_step{k}", f"hi80_step{k}", f"upper_step{k}", f"upper{k}", "upper", "hi"]
-    low = next((c for c in lows if c in df.columns), None)
-    up  = next((c for c in ups if c in df.columns), None)
-    if low and up:
-        return low, up
-
-    qlow = next((c for c in ["0.1", "q0.1", "p10"] if c in df.columns), None)
-    qup  = next((c for c in ["0.9", "q0.9", "p90"] if c in df.columns), None)
-    if qlow and qup:
-        return qlow, qup
-    return None, None
-
-
-def draw_generic(results_folder: Path, out_root: Path, model: str, split: str, country: str = None,
-                 last_n: int = 25, seq_len: int = 4):
-    out_root.mkdir(parents=True, exist_ok=True)
-
-
-    for k in [1, 2, 3, 4]:
-        csv_path = find_step_csv(results_folder, k)
-        if csv_path is None:
-            print(f"[WARN] Missing step{k} csv in {results_folder.name} (skip)")
-            continue
-
         df = pd.read_csv(csv_path)
-        dates = ensure_datetime_series(df)
-        df["_date"] = dates
-        df = df.tail(last_n).copy()
-        idx = pd.DatetimeIndex(pd.to_datetime(df["_date"]))
-
-        true_col = pick_true_col(df)
-        pred_col = pick_pred_col(df, k)
-        low_col, up_col = pick_interval_cols(df, k)
-
-        if true_col is None or pred_col is None:
-            print(f"[WARN] Missing true/pred in {csv_path.name} (skip). cols={list(df.columns)}")
-            continue
-
-        true_s = pd.Series(df[true_col].astype(float).to_numpy(), index=idx)
-        pred_s = pd.Series(df[pred_col].astype(float).to_numpy(), index=idx)
-        lower_s = pd.Series(df[low_col].astype(float).to_numpy(), index=idx) if low_col else None
-        upper_s = pd.Series(df[up_col].astype(float).to_numpy(), index=idx) if up_col else None
-
-        save_path = out_root / f"rolling_test_step{k}.png"
-        show_yticks, show_xticks, show_ylabel, show_xlabel = axis_flags_for_paper(model, split)
-        ylim = COUNTRY_YLIM.get(country)  # country 是 parse_model_data_country() 解析出来的
-        call_visual(
-            true_s, pred_s, save_path,
-            lower_s=lower_s, upper_s=upper_s, seq_len=seq_len,
-            paper=False,
-            show_xticks=show_xticks, show_yticks=show_yticks,
-            show_xlabel=show_xlabel, show_ylabel=show_ylabel,
-            ylim=ylim
-        )
-        print(f"[OK] {save_path}")
-
+        date_col = next((c for c in ["date", "time", "timestamp"] if c in df.columns), None)
+        true_col = next((c for c in ["true", "TRUE", "incidenza", "target"] if c in df.columns), None)
+        if date_col and true_col:
+            idx = pd.DatetimeIndex(pd.to_datetime(df[date_col], format='mixed', dayfirst=True))
+            return pd.Series(df[true_col].astype(float).to_numpy(), index=idx)
+    except: pass
+    return None
 
 # -----------------------------
-# Main
+# 2. 绘制大图
 # -----------------------------
+def plot_montage_for_country_step(results_dir: Path, out_dir: Path, country: str, step: int):
+    set_paper_style()
+    fig, axes = plt.subplots(4, 3, figsize=(14, 10))
+    fig.subplots_adjust(bottom=0.15, hspace=0.15, wspace=0.1)
+    
+    global_legend_dict = {}
+    
+    # ========================================================
+    # 【核心1】提取雷打不动的 25 点 Master Ground Truth 底座
+    # ========================================================
+    master_gt_series = fetch_ground_truth_series(results_dir, country, step)
+    if master_gt_series is not None:
+        master_gt_series = master_gt_series.tail(25)  # 严格锁定 25 个点
+        master_dates = master_gt_series.index.to_numpy()
+        master_y = master_gt_series.values
+    else:
+        master_dates = None
+        master_y = None
+
+    # 从字典中拿到当前 Step 对应的预测长度 (21/20/19/18)
+    pred_len = TARGET_LENGTHS.get(step, 18)
+
+    for r in range(4):
+        for c in range(3):
+            ax = axes[r, c]
+            prefix = GRID_LAYOUT[r][c]
+            color, label = get_model_style(prefix)
+            
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+            ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1)) 
+
+            if c > 0: ax.tick_params(labelleft=False)
+            else: ax.set_ylabel("Incidence")
+                
+            if r < 3: ax.tick_params(labelbottom=False)
+            else: plt.setp(ax.get_xticklabels(), rotation=30, ha='right')
+
+            if country in COUNTRY_YLIM:
+                ax.set_ylim(COUNTRY_YLIM[country])
+
+            # ========================================================
+            # 【核心2】在每个格子里，先把 25 个黑点和 分割线 画好！
+            # ========================================================
+            if master_dates is not None:
+                line_true, = ax.plot(master_dates, master_y, color='black', marker='o', markersize=3.5, linestyle='None', zorder=50)
+                if "GroundTruth" not in global_legend_dict:
+                    global_legend_dict["GroundTruth"] = line_true
+                
+                if len(master_dates) > 3:
+                    # 将分割线死死钉在日期轴的 第4个点 (index 3) 上
+                    ax.axvline(x=master_dates[3], color='gray', linestyle=':', linewidth=1.5, alpha=0.8, zorder=49)
+
+            # ========================================================
+            # 【核心3】加载各模型的预测值，严格按字典长度截断
+            # ========================================================
+            folder_path = results_dir / f"{prefix}_{country}_ILI"
+            csv_path = folder_path / f"rolling_pred_step{step}.csv"
+            if not csv_path.exists(): csv_path = folder_path / f"rolling_pred_step_{step}.csv"
+            
+            if not csv_path.exists():
+                ax.set_title(f"{label} (Missing)", fontsize=11, color="gray")
+                continue
+                
+            df = pd.read_csv(csv_path)
+            date_col = next((col for col in ["date", "time", "timestamp"] if col in df.columns), None)
+            if not date_col: continue
+            
+            df["_date"] = pd.to_datetime(df[date_col], format='mixed', dayfirst=True)
+            
+            pred_col = next((col for col in ["pred", "0.5", "target"] if col in df.columns), None)
+            if not pred_col: continue
+            
+            # 清除空值后，精准截取尾部 pred_len (21/20/19/18) 个点！
+            df_valid = df.dropna(subset=[pred_col])
+            df_pred = df_valid.tail(pred_len).copy()
+            
+            pred_dates = df_pred["_date"].to_numpy()
+            y_pred = df_pred[pred_col].values
+            
+            l_col = next((col for col in df_pred.columns if "lower" in col.lower() or "0.1" in col), None)
+            u_col = next((col for col in df_pred.columns if "upper" in col.lower() or "0.9" in col), None)
+            y_low = df_pred[l_col].values if l_col else None
+            y_up = df_pred[u_col].values if u_col else None
+
+            # 将纯净长度的预测线叠加上去
+            line_pred, = ax.plot(pred_dates, y_pred, color=color, linewidth=1.5, zorder=20)
+            if label not in global_legend_dict:
+                global_legend_dict[label] = line_pred
+                
+            if y_low is not None and y_up is not None:
+                ax.fill_between(pred_dates, y_low, y_up, color=color, alpha=0.2, zorder=10)
+                
+            ax.text(0.05, 0.9, label, transform=ax.transAxes, fontsize=11, fontweight='bold', va='top', ha='left')
+
+    fig.legend(
+        list(global_legend_dict.values()), list(global_legend_dict.keys()),
+        loc='lower center', ncol=6, bbox_to_anchor=(0.5, 0.02),
+        frameon=False, fontsize=11
+    )
+    
+    fig.suptitle(f"Forecast for {country} (Step {step})", y=0.96, fontsize=16, fontweight='bold')
+    save_path = out_dir / f"{country}_step{step}_montage.png"
+    plt.savefig(save_path, bbox_inches='tight', dpi=300)
+    plt.close()
+    print(f"[OK] Saved {save_path}")
+
 def main():
     repo_root = Path(".").resolve()
-    if (repo_root / "epi4cast" / "results").exists() and not (repo_root / "results").exists():
-        repo_root = repo_root / "epi4cast"
-
     results_dir = repo_root / "results"
-    dataset_dir = repo_root / "dataset"
-    out_base = repo_root / "test_results"
+    out_dir = repo_root / "test_results" / "montages"
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    if not results_dir.exists():
-        raise FileNotFoundError(f"Missing: {results_dir}")
-    if not dataset_dir.exists():
-        raise FileNotFoundError(f"Missing: {dataset_dir}")
-
-    folders = sorted([p for p in results_dir.iterdir() if p.is_dir()])
-    folders = [p for p in folders if "_simulated_" in p.name]
-    if not folders:
-        raise FileNotFoundError(f"No folders under: {results_dir}")
-
-    for f in folders:
-        model, split, data_str, country = parse_model_data_country(f.name)
-        out_root = out_base / f.name
-
-        if model == "TabPFN_ts":
-            if country is None:
-                print(f"[WARN] Cannot parse country from {f.name}, skip TabPFN.")
-                continue
-            draw_tabpfn(f, dataset_dir, out_root, country=country, split=split or "real", last_n=25, seq_len=4)
-
-        elif str(model).strip().lower() == "Respicast":
-            if country is None:
-                print(f"[WARN] Cannot parse country from {f.name}, skip Respicast.")
-                continue
-            draw_respicast(f, dataset_dir, out_root, country=country, split=split or "real", last_n=25, seq_len=4)
-
-        else:
-            # generic: includes ARIMA_real (top strip) and DLinear/LSTM/Autoformer (3x3 block)
-            draw_generic(f, out_root, model=model, split=split or "real", country=country, last_n=25, seq_len=4)
-
+    for country in COUNTRIES:
+        for step in [1, 2, 3, 4]:
+            plot_montage_for_country_step(results_dir, out_dir, country, step)
 
 if __name__ == "__main__":
     main()
