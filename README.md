@@ -114,10 +114,13 @@ mkdir dataset
 
 For example:
 
-To train the **LTSF-Linear** on **Exchange-Rate dataset**, you can use the script `scripts/EXP-LongForecasting/Linear/exchange_rate.sh`:
-```
-sh scripts/EXP-LongForecasting/Linear/exchange_rate.sh
-```
+Respicast Ensemble forecasts: 
+
+ILI/ARI 2024/25: https://github.com/european-modelling-hubs/RespiCast-SyndromicIndicators/tree/main/model-output/respicast-hubEnsemble
+
+ILI datasaet:For seasons 2017-2018，2018-2019, https://github.com/european-modelling-hubs/flu-forecast-hub_archive/blob/main/target-data/latest-ILI_incidence.csv，
+             For seasons 2023-2024，2024-2025, https://github.com/european-modelling-hubs/RespiCast-SyndromicIndicators/blob/main/target-data/latest-ILI_incidence.csv source from ERVISS
+Incidence means per 100,000 population
 In order to run it on Windows, you can first generate a ps1 version script and use the following code: 
 ```
 powershell -ExecutionPolicy Bypass -File scripts\EXP-LookBackWindow\Autoformer_LookBackWindow.ps1
