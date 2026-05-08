@@ -73,9 +73,26 @@ mae_wins = sort_by_total_wins(mae_wins)
 wis_wins = sort_by_total_wins(wis_wins)
 
 # rename display labels
-rename = {"TabPFN_ts": "TabPFN-TS"}
-mae_wins.index = mae_wins.index.map(lambda x: rename.get(x, x))
-wis_wins.index = wis_wins.index.map(lambda x: rename.get(x, x))
+DISPLAY_NAMES = {
+    "TabPFN_ts": "TabPFN-TS",
+}
+SETTING_LABELS = {
+    "combined": "comb",
+    "augmented": "aug",
+}
+
+def display_model_label(model_name):
+    """Convert internal names such as Autoformer_combined to plot labels."""
+    model_name = str(model_name)
+    for setting, short in SETTING_LABELS.items():
+        suffix = f"_{setting}"
+        if model_name.endswith(suffix):
+            base = model_name[:-len(suffix)]
+            return f"{DISPLAY_NAMES.get(base, base)} ({short})"
+    return DISPLAY_NAMES.get(model_name, model_name)
+
+mae_wins.index = mae_wins.index.map(display_model_label)
+wis_wins.index = wis_wins.index.map(display_model_label)
 
 # ── plot ──────────────────────────────────────────────────────────────────────
 # 使用高级的非饱和/莫兰迪色系 (Muted/Pastel)
