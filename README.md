@@ -89,7 +89,7 @@ Use extract_respicast_point_pred.npy and extract_respicast_wis_point_to_npy.py t
 
 Use fix_column_names_preds.py to fix column names for all prediction files and use fix_wis_length.py to make sure all wis have correct length.
 
-Use Ensemble.py to get pred of ensemble of our models and recompute__wis.py to compute wis80 for the ensemble.
+Use Ensemble.py to get pred of ensemble of our models and recompute_wis.py to compute wis80 for the ensemble.
 
 Use all_metrics.py to compute csv for all metrics and make_metrics_tables_latex.py to get a latex table.
 
