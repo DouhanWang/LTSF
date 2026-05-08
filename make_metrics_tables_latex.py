@@ -16,6 +16,7 @@ ALL_METRICS = ["MAE", "wMAPE", "WIS80_mean"]
 COL_PLAN = [
     ("Naive",      ""),
     ("ARIMA",      ""),
+    ("SEIR",       ""),
     ("DLinear",    "real"),
     ("DLinear",    "augmented"),
     ("DLinear",    "combined"),
@@ -35,7 +36,9 @@ COL_PLAN = [
 # use_multirow2=True  -> \multirow{2}{*}{\textbf{display}} in row 1, empty in row 2
 # use_multirow2=False -> \multicolumn{n}{c}{\textbf{display}} in row 1, sub_labels in row 2
 HEADER_GROUPS = [
-    ("Naive ARIMA", 2, False, ["real", "real"]),
+    ("Naive",  1, True, [""]),
+    ("ARIMA",  1, True, [""]),
+    ("SEIR",   1, True, [""]),
     ("DLinear",     3, False, ["real", "aug", "combined"]),
     ("LSTM",        3, False, ["real", "aug", "combined"]),
     ("Autoformer",  3, False, ["real", "aug", "combined"]),
@@ -164,7 +167,7 @@ def main():
 
         for i, (country, step) in enumerate(wide_str.index.tolist()):
             c_cell = f"\\multirow{{{country_span}}}{{*}}{{{escape(country)}}}" if i % country_span == 0 else ""
-            s_cell = f"step{step}"
+            s_cell = str(step)
             vals = list(data[i, :])
             lines.append(" & ".join([c_cell, s_cell] + vals) + " \\\\")
             # midrule between countries, but not after the last

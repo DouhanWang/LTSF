@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -15,7 +14,8 @@ COUNTRIES = [
 COUNTRY_LOWER = {c.lower(): c for c in COUNTRIES}
 
 # 把 Ensembleun 放在 Ensemble 前面！
-METHODS = ["Naive", "ARIMA", "DLinear", "LSTM", "Autoformer", "TabPFN_ts", "Respicast", "Ensemble"]
+METHODS = ["Naive", "ARIMA", "SEIR", "DLinear", "LSTM", "Autoformer", "TabPFN_ts", "Respicast", "Ensembleun", "Ensemble"]
+METHODS_BY_PREFIX = sorted(METHODS, key=len, reverse=True)
 TRAIN_SETTINGS = ["real", "augmented", "combined"]
 STEPS = [1, 2, 3, 4]
 
@@ -39,6 +39,21 @@ def wmape(y, yhat, eps=1e-12):
     denom = np.sum(np.abs(y)) + eps
     return float(np.sum(np.abs(y - yhat)) / denom)
 
+def normalize_dates_ddmmyyyy(date_series: pd.Series):
+    raw = date_series.astype(str).str.strip()
+    parsed = pd.to_datetime(raw, format="%Y-%m-%d", errors="coerce")
+
+    missing = parsed.isna()
+    if missing.any():
+        parsed.loc[missing] = pd.to_datetime(raw.loc[missing], format="%d/%m/%Y", errors="coerce")
+
+    missing = parsed.isna()
+    if missing.any():
+        parsed.loc[missing] = pd.to_datetime(raw.loc[missing], dayfirst=True, errors="coerce")
+
+    formatted = parsed.dt.strftime("%d/%m/%Y")
+    return formatted.where(parsed.notna(), raw)
+
 # ---------- 信息提取 Helper ----------
 def infer_dataset_type(path: Path) -> str:
     s = str(path).lower()
@@ -46,16 +61,27 @@ def infer_dataset_type(path: Path) -> str:
 
 def infer_country_method_trainsetting(path: Path):
     s = str(path).lower()
-    country = next((c for k, c in COUNTRY_LOWER.items() if k in s), None)
-    method = next((m for m in METHODS if m.lower() in s), None)
+    run_name = path.parent.name.lower()
+    country = next((c for k, c in COUNTRY_LOWER.items() if k in run_name), None)
+    if country is None:
+        country = next((c for k, c in COUNTRY_LOWER.items() if k in s), None)
+
+    method = None
+    for m in METHODS_BY_PREFIX:
+        prefix = m.lower()
+        if run_name == prefix or run_name.startswith(prefix + "_"):
+            method = m
+            break
+
     train_setting = ""
     if method in ["DLinear", "LSTM", "Autoformer"]:
-        train_setting = next((t for t in TRAIN_SETTINGS if re.search(rf"(^|[^a-z]){t}([^a-z]|$)", s)), "")
+        padded_run_name = f"_{run_name}_"
+        train_setting = next((t for t in TRAIN_SETTINGS if f"_{t}_" in padded_run_name), "")
     return country, method, train_setting
 
 # ---------- 主程序 ----------
 def main():
-    print("🚀 开始生成绝对公平的统一评估指标 (MAE, wMAPE, WIS80)...")
+    print("[INFO] 开始生成绝对公平的统一评估指标 (MAE, wMAPE, WIS80)...")
     point_files = [(step, p) for step in STEPS for p in ROOT.rglob(f"*rolling_pred_step{step}.csv")]
 
     # 1. 建立以日期为索引的超级真实值字典 (date -> true_value)
@@ -70,7 +96,7 @@ def main():
             true_col = "true" if "true" in df.columns else ("TRUE" if "TRUE" in df.columns else None)
             if true_col and "date" in df.columns and df[true_col].notna().any():
                 valid_df = df.dropna(subset=[true_col])
-                dates = valid_df["date"].astype(str).str.strip().values
+                dates = normalize_dates_ddmmyyyy(valid_df["date"]).values
                 trues = pd.to_numeric(valid_df[true_col], errors="coerce").values
                 ref_true[(dt, step, country)] = pd.Series(index=dates, data=trues)
         except:
@@ -92,12 +118,15 @@ def main():
             df = pd.read_csv(p)
             if "date" not in df.columns: continue
             
-            # 强行过滤！只保留在 expected_dates 范围内的预测数据
-            df["date_str"] = df["date"].astype(str).str.strip()
+            # 统一日期格式为 DD/MM/YYYY 再过滤
+            df["date_str"] = normalize_dates_ddmmyyyy(df["date"])
             df = df[df["date_str"].isin(expected_dates)]
-            
+
             dates = df["date_str"].values
-            y_pred = pd.to_numeric(df["pred"], errors="coerce").values
+            pred_col = next((c for c in df.columns if c in ("pred", "median", "mean") or c.startswith("pred_step")), None)
+            if pred_col is None:
+                continue
+            y_pred = pd.to_numeric(df[pred_col], errors="coerce").values
             
             true_col = "true" if "true" in df.columns else ("TRUE" if "TRUE" in df.columns else None)
             if true_col and df[true_col].notna().any():
@@ -157,8 +186,8 @@ def main():
         )
     
     df_out.to_csv(OUT_PATH, index=False)
-    print(f"\n🎉 [OK] 评估大表已生成！")
-    print(f"📁 存储位置: {OUT_PATH}")
+    print("\n[OK] 评估大表已生成！")
+    print(f"[OUT] 存储位置: {OUT_PATH}")
 
 if __name__ == "__main__":
     main()

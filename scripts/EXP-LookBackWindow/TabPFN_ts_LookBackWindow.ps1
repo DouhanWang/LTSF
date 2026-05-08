@@ -24,7 +24,7 @@ $target_col = "incidenza"                      # <-- change if needed
 $item_ids = @(0)                               # e.g. @(0) or @($null)
 
 # rolling config
-$test_sizes = @(21)
+$test_sizes = @(25)
 $pred_lens  = @(4)
 $freq_days  = 7                                # weekly timestamps padding
 $tabpfn_mode = "client"                        # client | local
@@ -62,7 +62,8 @@ foreach ($item_id in $item_ids) {
                 "--test_size", $test_size,
                 "--pred_len", $pred_len,
                 "--freq_days", $freq_days,
-                "--tabpfn_mode", $tabpfn_mode
+                "--tabpfn_mode", $tabpfn_mode,
+                "--seq_len", 4
             )
 
             # Add item_id if specified

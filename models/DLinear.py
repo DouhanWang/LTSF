@@ -44,8 +44,17 @@ class Model(nn.Module):
         self.seq_len = configs.seq_len
         self.pred_len = configs.pred_len
 
-        # Decompsition Kernel Size
-        kernel_size = 25
+        # Decomposition kernel size. For short look-back windows, this should be
+        # passed explicitly by the experiment script instead of using the long
+        # sequence default from the original DLinear implementation.
+        kernel_size = int(getattr(configs, "moving_avg", 3))
+        if kernel_size < 1:
+            raise ValueError("DLinear moving_avg must be a positive integer.")
+        if kernel_size % 2 == 0:
+            raise ValueError("DLinear moving_avg must be odd to keep centered padding.")
+        if kernel_size > self.seq_len:
+            raise ValueError("DLinear moving_avg should be <= seq_len for short-window forecasting.")
+        self.moving_avg = kernel_size
         self.decompsition = series_decomp(kernel_size)
         self.individual = configs.individual
         self.channels = configs.enc_in

@@ -85,6 +85,7 @@ def main():
     parser.add_argument("--pred_len", type=int, default=4, help="预测步数（默认 4）")
     parser.add_argument("--freq_days", type=int, default=7, help="补未来时间戳的步长（天），周频=7")
     parser.add_argument("--tabpfn_mode", type=str, default="client", choices=["client", "local"], help="TabPFNMode")
+    parser.add_argument("--seq_len", type=int, default=4, help="与其他模型对齐：跳过前 seq_len 个测试点，保证预测时已知前 seq_len 个观测值")
     args = parser.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -134,10 +135,13 @@ def main():
     # 保存：按 step(1..pred_len) 分开存
     all_predictions_by_step = {step: [] for step in range(1, pred_len + 1)}
 
+    seq_len = int(args.seq_len)
+    print(f"Skipping first {seq_len} origins to align with other models (seq_len={seq_len})")
+
     for step in range(1, pred_len + 1):
         print(f"\n========== Running {step}-step (save only step {step}) ==========")
 
-        for i in range(0, test_size):
+        for i in range(seq_len, test_size):
             current_train_end = train_end_index + i
 
             curr_train_df = df_raw.iloc[:current_train_end].copy()
@@ -320,7 +324,7 @@ def main():
         visual(
             true=true_series,
             preds=preds_series,
-            path=fig_path,
+            name=fig_path,
             lower=lower_series,
             upper=upper_series,
             seq_len=train_end_index,

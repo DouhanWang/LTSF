@@ -24,16 +24,38 @@ def load_mean_wis_from_npy(run_dir: Path, step: int) -> float:
         raise FileNotFoundError(f"找不到 WIS 文件: {p}")
     return float(np.nanmean(np.load(p)))
 
+def normalize_dates_ddmmyyyy(date_series: pd.Series):
+    raw = date_series.astype(str).str.strip()
+    parsed = pd.to_datetime(raw, format="%Y-%m-%d", errors="coerce")
+
+    missing = parsed.isna()
+    if missing.any():
+        parsed.loc[missing] = pd.to_datetime(raw.loc[missing], format="%d/%m/%Y", errors="coerce")
+
+    missing = parsed.isna()
+    if missing.any():
+        parsed.loc[missing] = pd.to_datetime(raw.loc[missing], dayfirst=True, errors="coerce")
+
+    formatted = parsed.dt.strftime("%d/%m/%Y")
+    return formatted.where(parsed.notna(), raw)
+
 # -----------------------------
 # 2. 读取 CSV 并立刻转化为干净的数据字典
 # -----------------------------
 def load_clean_df(path: Path):
     df = pd.read_csv(path)
-    
-    # 获取纯字符串日期
-    date_series = df["date"].astype(str).str.strip() if "date" in df.columns else None
-    
-    pred = pd.to_numeric(df["pred"], errors="coerce")
+
+    # 统一日期格式为 DD/MM/YYYY
+    if "date" in df.columns:
+        date_series = normalize_dates_ddmmyyyy(df["date"])
+    else:
+        date_series = None
+
+    # 支持 pred / median / mean / pred_step{N} 列名
+    pred_col = next((c for c in df.columns if c in ("pred", "median", "mean") or c.startswith("pred_step")), None)
+    if pred_col is None:
+        raise KeyError("pred")
+    pred = pd.to_numeric(df[pred_col], errors="coerce")
     
     true_col = "true" if "true" in df.columns else ("TRUE" if "TRUE" in df.columns else None)
     y_true = pd.to_numeric(df[true_col], errors="coerce") if true_col else pd.Series([np.nan]*len(df))
@@ -51,6 +73,22 @@ def load_clean_df(path: Path):
         "lower80": lower80,
         "upper80": upper80
     })
+
+def align_to_expected_dates(df: pd.DataFrame, expected_dates: list[str], source):
+    df = df[df["date"].isin(expected_dates)].copy()
+    seen_dates = set(df["date"].dropna().astype(str))
+    expected_set = set(expected_dates)
+    if seen_dates != expected_set or len(df) != len(expected_dates):
+        missing = [d for d in expected_dates if d not in seen_dates]
+        extra = sorted(seen_dates - expected_set)
+        raise ValueError(
+            f"Date alignment failed for {source}: "
+            f"expected {len(expected_dates)} rows, got {len(df)}; "
+            f"missing={missing[:5]}, extra={extra[:5]}"
+        )
+
+    df["date_cat"] = pd.Categorical(df["date"], categories=expected_dates, ordered=True)
+    return df.sort_values("date_cat").drop(columns=["date_cat"]).reset_index(drop=True)
 
 # -----------------------------
 # 3. 提取基准 True
@@ -107,6 +145,7 @@ def weighted_ensemble(dfs: list[pd.DataFrame], mean_wis_list: list[float], expec
 # -----------------------------
 fixed_members = [
     ("ARIMA", "real"),
+    ("SEIR", "real"),
     ("TabPFN_ts", "real"),
 ]
 
@@ -117,7 +156,7 @@ selectable_members = [
 ]
 
 def run_one_country(results_root: Path, country: str, target: str):
-    out_dir = results_root / f"ensemble_real_{country}_{target}"
+    out_dir = results_root / f"Ensemble_real_{country}_{target}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     for step in [1, 2, 3, 4]:
@@ -141,9 +180,7 @@ def run_one_country(results_root: Path, country: str, target: str):
             
             df = load_clean_df(fcsv)
             # 严格按照期待的日期切片，保证长度完全对齐！
-            df = df[df["date"].isin(expected_dates)].copy()
-            df["date_cat"] = pd.Categorical(df["date"], categories=expected_dates, ordered=True)
-            df = df.sort_values("date_cat").drop(columns=["date_cat"]).reset_index(drop=True)
+            df = align_to_expected_dates(df, expected_dates, fcsv)
 
             if ref_true_df is not None:
                 df["true"] = ref_true_df["true"].to_numpy()
@@ -165,14 +202,15 @@ def run_one_country(results_root: Path, country: str, target: str):
                 if best is None or mw < best[0]:
                     best = (mw, folder, run_dir)
 
+            if best is None:
+                raise FileNotFoundError(f"No WIS files found for {model} {country} {target} step{step}")
+
             mean_wis, folder, run_dir = best
             fcsv = run_dir / f"rolling_pred_step{step}.csv"
             
             df = load_clean_df(fcsv)
             # 严格按照期待的日期切片！
-            df = df[df["date"].isin(expected_dates)].copy()
-            df["date_cat"] = pd.Categorical(df["date"], categories=expected_dates, ordered=True)
-            df = df.sort_values("date_cat").drop(columns=["date_cat"]).reset_index(drop=True)
+            df = align_to_expected_dates(df, expected_dates, fcsv)
 
             if ref_true_df is not None:
                 df["true"] = ref_true_df["true"].to_numpy()

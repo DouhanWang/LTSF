@@ -1,6 +1,9 @@
 import os
 import numpy as np
 import pandas as pd
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from pathlib import Path
@@ -9,7 +12,8 @@ from pathlib import Path
 # 1. 颜色与基础配置 
 # ==========================================
 PAPER_COLORS = {
-    "ARIMA_real": "#636363", 
+    "ARIMA_real": "#636363",
+    "SEIR_real": "#008B8B",
     "DLinear_real": "#6BAED6",  
     "DLinear_aug": "#3182BD",   
     "DLinear_comb": "#08519C",  
@@ -28,6 +32,14 @@ DEFAULT_COUNTRIES = [
     "Belgium", "Czechia", "Denmark", "France", "Ireland",
     "Italy", "Netherlands", "Poland", "Romania",
 ]
+
+EXCLUDED_BEST_METHODS = {
+    "ensembleun",
+    "ensemble_un",
+    "ensemble-un",
+    "unweighted_ensemble",
+    "unweighted ensemble",
+}
 
 COUNTRY_YLIM = {
     "Belgium": (0, 1600),
@@ -58,6 +70,7 @@ def get_model_identity(method, setting):
     if m == "respicast": return "RespiCast", "Respicast_real"
     if m == "naive": return "Naive", "ARIMA_real"
     if m == "arima": return "ARIMA", "ARIMA_real"
+    if m == "seir": return "SEIR", "SEIR_real"
     
     if m == "dlinear": m_display = "DLinear"
     elif m == "lstm": m_display = "LSTM"
@@ -123,7 +136,7 @@ def load_pred_from_csv(csv_path, last_n=18):
 
     cols = {c.lower(): c for c in df.columns}
     
-    pcol = next((cols[k] for k in ["pred", "y_pred", "forecast", "target", "0.5"] if k in cols), None)
+    pcol = next((cols[k] for k in ["pred", "y_pred", "forecast", "target", "0.5", "median"] if k in cols), None)
     if not pcol: return None, None, None
     
     p_vals = pd.to_numeric(df[pcol], errors='coerce').values
@@ -212,8 +225,9 @@ def plot_point_forecast_with_interval(
         # ----------------------------------------------------
         # 2. 查表找最好模型
         # ----------------------------------------------------
-        respi_row = df_c[df_c["method"].str.lower() == "respicast"]
-        others = df_c[df_c["method"].str.lower() != "respicast"]
+        method_key = df_c["method"].astype(str).str.strip().str.lower()
+        respi_row = df_c[method_key == "respicast"]
+        others = df_c[(method_key != "respicast") & (~method_key.isin(EXCLUDED_BEST_METHODS))]
         
         rows_to_plot = []
         if not respi_row.empty:
@@ -293,7 +307,7 @@ def plot_point_forecast_with_interval(
     ]
     
     order_list = [
-        "ARIMA", "DLinear (real)", "DLinear (aug)", "DLinear (comb)",
+        "ARIMA", "SEIR", "DLinear (real)", "DLinear (aug)", "DLinear (comb)",
         "LSTM (real)", "LSTM (aug)", "LSTM (comb)",
         "Autoformer (real)", "Autoformer (aug)", "Autoformer (comb)",
         "TabPFN-TS", "Ensemble", "RespiCast"

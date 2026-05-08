@@ -3,13 +3,23 @@
 # ============================
 $ErrorActionPreference = "Continue"
 # ---------- paths ----------
-$PROJECT_ROOT = (Get-Location).Path              # should be qm/
-$EPICAST_DIR = Join-Path $PROJECT_ROOT $PKG_NAME   # qm\epi4cast
 $PKG_NAME     = "epi4cast"
-$DATA_ROOT    = Join-Path $PROJECT_ROOT "$PKG_NAME\dataset"   # <-- adjust if your datasets live elsewhere
-$LOG_ROOT     = Join-Path $PROJECT_ROOT "$PKG_NAME\logs"
-$RESULT_ROOT  = Join-Path $PROJECT_ROOT "$PKG_NAME\results"
-$TEST_RESULT_ROOT  = Join-Path $PROJECT_ROOT "$PKG_NAME\test_results"
+$CURRENT_DIR  = (Get-Location).Path
+
+if (Test-Path (Join-Path $CURRENT_DIR "run_longExp.py")) {
+    # Running from qm\epi4cast
+    $EPICAST_DIR = $CURRENT_DIR
+    $PROJECT_ROOT = Split-Path $EPICAST_DIR -Parent
+} else {
+    # Running from qm
+    $PROJECT_ROOT = $CURRENT_DIR
+    $EPICAST_DIR = Join-Path $PROJECT_ROOT $PKG_NAME
+}
+
+$DATA_ROOT    = Join-Path $EPICAST_DIR "dataset"
+$LOG_ROOT     = Join-Path $EPICAST_DIR "logs"
+$RESULT_ROOT  = Join-Path $EPICAST_DIR "results"
+$TEST_RESULT_ROOT  = Join-Path $EPICAST_DIR "test_results"
 $ENV_GPU   = "ltsf-gpu"
 # ---------- conda env for TabPFN_ts ----------
 $ENV_TABPFN = "tabpfn-ts"     # change if your env name differs
@@ -19,8 +29,18 @@ $FREQ_DAYS    = 7
 # ---------- forecasting config ----------
 $SEQ_LEN   = 4
 $PRED_LEN  = 4
+$DLINEAR_MOVING_AVG = 3
 $LABEL_LEN_DEFAULT = 0          # for most models
 $LABEL_LEN_AUTOFORMER = 4       # Autoformer script used label_len=4
+$ARIMA_START_P = 2
+$ARIMA_START_Q = 2
+$ARIMA_MAX_P = 5
+$ARIMA_MAX_D = 2
+$ARIMA_MIN_Q = 0                # normal auto ARIMA can choose no MA term if q=0 is best
+$ARIMA_MAX_Q = 5
+$ARIMA_IC    = "aic"
+$ARIMA_TEST  = "kpss"
+$ARIMA_MAX_ORDER = 5
 
 # ---------- common dataset columns ----------
 $TARGET_COL = "incidenza"
@@ -32,7 +52,7 @@ $C_OUT      = 1
 
 # ---------- countries (file-name Country part) ----------
 # These should match your filenames exactly: real_Belgium_ILI.csv, etc.
-$countries = @("Poland") #"Belgium","Czechia","Denmark","France","Ireland","Italy","Netherlands","Poland","Romania"
+$countries = @("Belgium","Czechia","Denmark","France","Ireland","Italy","Netherlands","Romania") #"Belgium","Czechia","Denmark","France","Ireland","Italy","Netherlands","Poland","Romania"
 
 # ---------- datasets ----------
 function Get-DatasetsForModel($modelName, $countryName) {
@@ -42,16 +62,18 @@ function Get-DatasetsForModel($modelName, $countryName) {
     $median   = "simulated_${countryName}_ILI_median.csv"
     $combined = "combined_${countryName}_ILI.csv"
 
-    if ($modelName -in @("ARIMA","TabPFN_ts")) {
-        return @($real, $median)   # only real + median
+    if ($modelName -eq "TabPFN_ts") {
+        return @($real)            # only real
+    } elseif ($modelName -eq "ARIMA") {
+        return @($real)            # only real
     } else {
-        return @($real, $sim, $aug, $combined)  # no median
+        return @($real, $combined, $aug)  # no simulated or median
     }
 }
 
 # ---------- models you want to run ----------
 # Add more here if needed (but keep the "median rule" in mind).
-$models = @("TabPFN_ts") #"DLinear","Autoformer","LSTM","Naive","ARIMA",
+$models = @("DLinear") #"DLinear","Autoformer","LSTM","Naive","ARIMA",
 
 # ---------- helpers ----------
 function Ensure-Dir($p) {
@@ -84,6 +106,8 @@ function Run-LongExpModel($modelName, $dataFile, $countryName) {
         "--label_len", $labelLen,
         "--pred_len", $PRED_LEN,
         "--enc_in", $ENC_IN,
+        "--dec_in", $DEC_IN,
+        "--c_out", $C_OUT,
         "--des", "Exp",
         "--loss", "mse",
         "--itr", "1",
@@ -94,7 +118,7 @@ function Run-LongExpModel($modelName, $dataFile, $countryName) {
 
     # Per-model hyperparams (copied from your scripts)
     if ($modelName -eq "DLinear") {
-        $args += @("--batch_size","32","--learning_rate","0.005","--train_epochs","30","--patience","3")
+        $args += @("--moving_avg","$DLINEAR_MOVING_AVG","--batch_size","32","--learning_rate","0.005","--train_epochs","30","--patience","3")
     }
     elseif ($modelName -eq "LSTM") {
         $args += @("--e_layers","2","--dropout","0.1","--batch_size","32","--learning_rate","0.005","--train_epochs","30","--patience","3")
@@ -110,8 +134,6 @@ function Run-LongExpModel($modelName, $dataFile, $countryName) {
             "--d_layers","1",
             "--factor","3",
             "--moving_avg","$moving_avg",
-            "--dec_in",$DEC_IN,
-            "--c_out",$C_OUT,
             "--d_model","32",
             "--d_ff","64",
             "--n_heads","2",
@@ -125,16 +147,26 @@ function Run-LongExpModel($modelName, $dataFile, $countryName) {
         $args = $args | ForEach-Object { $_ }
     }
     elseif ($modelName -eq "ARIMA") {
-        # keep your ARIMA settings
+        # Standard non-seasonal auto ARIMA: select p, d, and q by AIC.
         $args += @(
             "--batch_size","1",
             "--learning_rate","0.005",
             "--train_epochs","1",
             "--patience","1",
-            "--arima_p","1",
-            "--arima_d","1",
-            "--arima_q","0",
-            "--arima_alpha","0.2"
+            "--arima_auto",
+            "--arima_start_p","$ARIMA_START_P",
+            "--arima_start_q","$ARIMA_START_Q",
+            "--arima_min_p","0",
+            "--arima_max_p","$ARIMA_MAX_P",
+            "--arima_min_d","0",
+            "--arima_max_d","$ARIMA_MAX_D",
+            "--arima_min_q","$ARIMA_MIN_Q",
+            "--arima_max_q","$ARIMA_MAX_Q",
+            "--arima_ic","$ARIMA_IC",
+            "--arima_test","$ARIMA_TEST",
+            "--arima_max_order","$ARIMA_MAX_ORDER",
+            "--arima_alpha","0.2",
+            "--skip_plots"
         )
     }
 
@@ -185,8 +217,9 @@ function Run-TabPFN($dataFile, $countryName) {
         "--out_dir", $outDir,
         "--item_col", "item_id",
         "--target", $TARGET_COL,
-        "--test_size", "21",
+        "--test_size", ($SEQ_LEN + 21),
         "--pred_len", "$PRED_LEN",
+        "--seq_len", "$SEQ_LEN",
         "--freq_days", "$FREQ_DAYS",
         "--tabpfn_mode", $TABPFN_MODE,
         "--item_id", "0"

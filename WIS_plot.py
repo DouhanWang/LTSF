@@ -15,6 +15,7 @@ DEFAULT_COUNTRIES = [
 DEFAULT_METHODS = [
     ("Naive_real", "Naive (Real)"),
     ("ARIMA_real", "ARIMA (Real)"),
+    ("SEIR_real", "SEIR"),
     ("DLinear_real", "DLinear (Real)"),
     ("DLinear_aug", "DLinear (Aug)"),
     ("DLinear_comb", "DLinear (Comb)"),
@@ -620,6 +621,7 @@ def plot_relative_wis_paper_all(
 PAPER_COLORS = {
     # 基础基准：从中灰变为深灰，增加分量感
     "ARIMA_real": "#636363",  # Deep Gray
+    "SEIR_real": "#008B8B",   # Dark Cyan
 
     # DLinear 系列：从浅蓝转向深海蓝/宝石蓝
     "DLinear_real": "#6BAED6",  # Medium Blue
@@ -678,8 +680,9 @@ def plot_relative_wis_grid_3x3(
     # ---- 排序：想要显示在最上面的放前面 ----
     FIXED_ORDER = [
         ("ARIMA_real", "ARIMA"),
+        ("SEIR_real", "SEIR"),
         ("DLinear_real", "DLinear (real)"),
-        ("DLinear_aug", "DLinear (aug)"),  # 修正后缀
+        ("DLinear_aug", "DLinear (aug)"),
         ("DLinear_comb", "DLinear (comb)"),
         ("LSTM_real", "LSTM (real)"),
         ("LSTM_aug", "LSTM (aug)"),
@@ -860,11 +863,11 @@ if __name__ == "__main__":
     plot_relative_wis_grid_3x3(
         results_root="./results",
         countries=DEFAULT_COUNTRIES,  # 9个国家
-        horizon=4,  # 画step1；想画step2就改成2
+        horizon=1,
         methods=DEFAULT_METHODS,
         baseline_tag="Naive_real",
         wis_file_prefix="wis80_point_step",
         settings_contains=None,
-        out_path="./test_results/montages/relwis_grid_step4_new.pdf",
+        out_path="./test_results/montages/relwis_grid_step1_new.pdf",
         ylim=(0,4),  # 或者 (0,4) 固定
     )

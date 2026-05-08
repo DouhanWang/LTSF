@@ -29,6 +29,9 @@ def coalesce_cols(df: pd.DataFrame, cols):
         else: out = out.where(out.notna(), s)
     return out
 
+def is_seir_path(path: Path):
+    return any(str(part).lower().startswith("seir_") for part in path.parts)
+
 # ==========================================
 # 步骤 1：先改 TabPFN 文件名
 # ==========================================
@@ -71,6 +74,12 @@ def step2_and_3_process_csv(path: Path):
 
     # 2. 统一预测列名为 'pred'
     cand = [c for c in df.columns if str(c).strip().lower() in PRED_NAMES or PRED_STEP_RE.match(str(c).strip().lower())]
+    if is_seir_path(path):
+        median_cols = [c for c in df.columns if str(c).strip().lower() == "median"]
+        if median_cols:
+            pred_cols = [c for c in cand if str(c).strip().lower() == "pred"]
+            cand = median_cols + pred_cols
+
     if cand and not (len(cand) == 1 and str(cand[0]).strip() == "pred"):
         df["pred"] = coalesce_cols(df, cand)
         for c in cand:

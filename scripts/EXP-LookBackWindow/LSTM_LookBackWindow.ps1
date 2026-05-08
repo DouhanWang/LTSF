@@ -37,6 +37,8 @@ foreach ($seq_len in $seq_lengths) {
            --label_len $label_len `
            --pred_len $pred_len `
            --enc_in 1 `
+           --dec_in 1 `
+           --c_out 1 `
            --e_layers 2 `
            --dropout 0.1 `
            --des "Exp" `
@@ -54,4 +56,4 @@ foreach ($seq_len in $seq_lengths) {
     Write-Host "Finished $model_name with seq_len=$seq_len" -ForegroundColor Green
 }
 
-Write-Host "All DLinear ILI experiments complete!" -ForegroundColor Yellow
+Write-Host "All LSTM ILI experiments complete!" -ForegroundColor Yellow

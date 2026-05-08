@@ -48,6 +48,30 @@ parser.add_argument('--arima_trend', type=str, default='n',
                     help='ARIMA trend: n/c/t/ct (statsmodels)')
 parser.add_argument('--arima_maxiter', type=int, default=200,
                     help='Max iterations for ARIMA fit')
+parser.add_argument('--arima_auto', action='store_true',
+                    help='Automatically select ARIMA(p,d,q) order by information criterion')
+parser.add_argument('--arima_start_p', type=int, default=2,
+                    help='Starting AR order for pmdarima auto_arima')
+parser.add_argument('--arima_start_q', type=int, default=2,
+                    help='Starting MA order for pmdarima auto_arima')
+parser.add_argument('--arima_min_p', type=int, default=0,
+                    help='Minimum AR order considered by auto ARIMA')
+parser.add_argument('--arima_max_p', type=int, default=5,
+                    help='Maximum AR order considered by auto ARIMA')
+parser.add_argument('--arima_min_d', type=int, default=0,
+                    help='Minimum differencing order considered by auto ARIMA')
+parser.add_argument('--arima_max_d', type=int, default=2,
+                    help='Maximum differencing order considered by auto ARIMA')
+parser.add_argument('--arima_min_q', type=int, default=0,
+                    help='Minimum MA order considered by auto ARIMA')
+parser.add_argument('--arima_max_q', type=int, default=5,
+                    help='Maximum MA order considered by auto ARIMA')
+parser.add_argument('--arima_ic', type=str, default='aic', choices=['aic', 'bic', 'hqic'],
+                    help='Information criterion used by auto ARIMA')
+parser.add_argument('--arima_test', type=str, default='kpss', choices=['kpss', 'adf', 'pp'],
+                    help='Stationarity test used to select d in pmdarima auto_arima')
+parser.add_argument('--arima_max_order', type=int, default=5,
+                    help='Maximum p+q order used by auto ARIMA search')
 
 
 # Formers 
@@ -71,6 +95,8 @@ parser.add_argument('--embed', type=str, default='timeF',
 parser.add_argument('--activation', type=str, default='gelu', help='activation')
 parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')
 parser.add_argument('--do_predict', action='store_true', help='whether to predict unseen future data')
+parser.add_argument('--skip_plots', action='store_true',
+                    help='Skip forecast plot generation and only save predictions/metrics')
 
 # optimization
 parser.add_argument('--num_workers', type=int, default=10, help='data loader num workers')

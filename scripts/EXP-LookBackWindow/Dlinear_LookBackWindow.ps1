@@ -13,6 +13,7 @@ $model_name = "DLinear"
 $seq_lengths = @(4)
 $pred_len = 4
 $label_len = 0
+$moving_avg = 3
 # ---
 # for China data
 #--features MS
@@ -37,6 +38,9 @@ foreach ($seq_len in $seq_lengths) {
            --label_len $label_len `
            --pred_len $pred_len `
            --enc_in 1 `
+           --dec_in 1 `
+           --c_out 1 `
+           --moving_avg $moving_avg `
            --des "Exp" `
            --loss mse `
            --itr 1 `

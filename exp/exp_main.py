@@ -491,6 +491,13 @@ class Exp_Main(Exp_Basic):
 
         # -------- per-horizon evaluation --------
         results_by_h = {}
+        window_outputs = []
+
+        # Fit/forecast each rolling origin once, then reuse the 4-step forecast
+        # across all horizons. This is especially important for auto-ARIMA.
+        for s in range(0, T - seq_len + 1):
+            out, arima_low, arima_up = forward_one_window(s)
+            window_outputs.append((s, out, arima_low, arima_up))
 
         for h in range(pred_len):  # h=0..3 => 1..4-step
             step = h + 1
@@ -501,9 +508,7 @@ class Exp_Main(Exp_Basic):
             arima_up_h = []  # NEW
 
             # start index s: allow up to T-seq_len (not restricted by pred_len)
-            for s in range(0, T - seq_len + 1):
-                out, arima_low, arima_up = forward_one_window(s)
-
+            for s, out, arima_low, arima_up in window_outputs:
                 target_global_idx = s + seq_len + h  # the time index we evaluate
                 if target_global_idx >= T:
                     continue  # beyond season end -> do not evaluate
@@ -613,12 +618,13 @@ class Exp_Main(Exp_Basic):
             lower_s = pds.Series(lower_plot, index=dates_window)
             upper_s = pds.Series(upper_plot, index=dates_window)
 
-            visual(true=gt_s,
-                   preds=pred_s,
-                   path=os.path.join(plot_folder, f"rolling_test_step{h + 1}.png"),
-                   lower=lower_s,
-                   upper=upper_s,
-                   seq_len=seq_len)
+            if not getattr(self.args, "skip_plots", False):
+                visual(true=gt_s,
+                       preds=pred_s,
+                       name=os.path.join(plot_folder, f"rolling_test_step{h + 1}.png"),
+                       lower=lower_s,
+                       upper=upper_s,
+                       seq_len=seq_len)
 
             # ---- SAVE per-step npy ----
             np.save(os.path.join(save_folder, f"pred_step{step}.npy"), preds_h)
