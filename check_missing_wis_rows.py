@@ -1,3 +1,10 @@
+# Copyright 2026 DouhanWang. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
 import pandas as pd
 
 IN_PATH = "dataset/latest-forecast_scores.csv"
@@ -31,12 +38,12 @@ df = df[
     (df["metric"].str.upper() == INTERVAL_METRIC)
 ].copy()
 
-# 每国每step应该 21 个
+# each country each step should be 21 
 expected = df.groupby(["location","horizon"])["origin_date_dt"].nunique().unstack(fill_value=0)
 print("Counts of unique origin_date per (country, horizon):")
 print(expected.loc[COUNTRIES, [1,2,3,4]])
 
-# 直接列出 France step3/4 缺的是哪些 origin_date
+# Show France step3/4 missing what origin_date
 for loc in ["FR","RO"]:
     for h in [1,2,3,4]:
         sub = df[(df["location"]==loc) & (df["horizon"].astype(int)==h)].copy()

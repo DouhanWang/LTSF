@@ -1,3 +1,10 @@
+# Copyright 2026 DouhanWang. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
 import os
 import re
 import numpy as np
@@ -6,9 +13,7 @@ from pathlib import Path
 # 【配置】根目录路径
 ROOT = Path("./results")
 
-# ==========================================
-# 统一长度截取规则：键为 step，值为需要保留的“后 N 个”
-# ==========================================
+
 TARGET_LENGTHS = {
     1: 21, 
     2: 20, 
@@ -17,10 +22,10 @@ TARGET_LENGTHS = {
 }
 
 def process_all_wis_npy():
-    print("🚀 --- 开始统一处理 wis80_point npy 文件 ---")
+    print("🚀 --- Step 1: Start processing wis80_point npy files ---")
     stats = {"processed": 0, "skipped_perfect": 0, "error": 0}
     
-    # 匹配文件名提取 step (1, 2, 3, 4)
+    # find filename with step (1, 2, 3, 4)
     step_re = re.compile(r"wis80_point_step(\d+)\.npy", re.IGNORECASE)
     
     for p in ROOT.rglob("wis80_point_step*.npy"):
@@ -31,41 +36,41 @@ def process_all_wis_npy():
             continue
         step = int(match.group(1))
         
-        # 2. 获取当前 step 的目标截取长度
+        # 2. get target length for current step
         target_len = TARGET_LENGTHS.get(step, 21)
         
-        # 3. 读取、截断与保存
+        # 3. read, truncate, and save
         try:
             arr = np.load(p)
             current_len = len(arr)
             
-            # 情况 A: 原长度大于目标长度 -> 需要从后往前截取
+            # case A: raw length greater than target length -> need to truncate from the end
             if current_len > target_len:
-                new_arr = arr[-target_len:]  # 核心：取后 target_len 个
+                new_arr = arr[-target_len:]  # core: take the last target_len elements
                 np.save(p, new_arr)
                 stats["processed"] += 1
-                print(f"✅ [截断成功] {p.parent.name}/{p.name} | 原长 {current_len} -> 保留后 {target_len} 个")
+                print(f"✅ [Truncation Successful] {p.parent.name}/{p.name} | Original length {current_len} -> Retained {target_len} elements")
                 
-            # 情况 B: 原长度刚好等于目标长度 -> 无需修改，节省磁盘读写
+            # case B: raw length exactly equals target length -> no modification needed, save disk I/O
             elif current_len == target_len:
                 stats["skipped_perfect"] += 1
-                # print(f"ℹ️ [无需修改] {p.parent.name}/{p.name} | 长度已经是完美的 {target_len}")
+                # print(f"ℹ️ [No Modification Needed] {p.parent.name}/{p.name} | Length is already perfect {target_len}")
                 
-            # 情况 C: 原长度居然比目标还要短 -> 报错警告
+            # case C: raw length is shorter than target -> error/warning
             else:
                 stats["error"] += 1
-                print(f"⚠️ [长度不足] {p.parent.name}/{p.name} | 需要后 {target_len} 个，但总共只有 {current_len} 个！")
+                print(f"⚠️ [Insufficient Length] {p.parent.name}/{p.name} | Need {target_len} elements, but only {current_len} available!")
                 
         except Exception as e:
             stats["error"] += 1
-            print(f"❌ [读取失败] {p}: {e}")
+            print(f"❌ [Read Failed] {p}: {e}")
 
-    print("\n🎉 === 统一处理任务完成 === ")
-    print(f"🔄 成功截断并覆盖的文件数: {stats['processed']}")
-    print(f"✅ 原本长度就已完美的文件数: {stats['skipped_perfect']}")
+    print("\n🎉 === Uniform Processing Task Completed === ")
+    print(f"🔄 Successfully Truncated and Overwritten Files: {stats['processed']}")
+    print(f"✅ Files with Perfect Length: {stats['skipped_perfect']}")
     
     if stats["error"] > 0:
-        print(f"⚠️ 警告: 有 {stats['error']} 个文件报错或长度不足，请往上翻看终端输出。")
+        print(f"⚠️ Warning: There are {stats['error']} files with errors or insufficient length. Please scroll up to view the terminal output.")
 
 if __name__ == "__main__":
     process_all_wis_npy()

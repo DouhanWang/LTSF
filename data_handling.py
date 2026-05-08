@@ -1,6 +1,18 @@
+# Copyright 2026 DouhanWang. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
 import numpy as np
 import pandas as pd
 from datetime import date
+
+
+'''
+The code below loads the 4 .npz files and get .csv file for exogeneous data.
+'''
 npz_paths = [
     "dataset/simulations_ILI/RO_2017_2018.npz",
     "dataset/simulations_ILI/RO_2018_2019.npz",
@@ -45,11 +57,11 @@ season_starts = [
 dfs = []
 for season_id, (npz_path, (sy, sw)) in enumerate(zip(npz_paths, season_starts)):
     arr = load_first_array(npz_path)               # (1000, 27)
-    wk = generate_iso_yearweeks(sy, sw, 27)         # 27个(anno,settimana)
+    wk = generate_iso_yearweeks(sy, sw, 27)         # 27 (anno,settimana)
 
     df = pd.DataFrame({
         "item_id": np.repeat(np.arange(1000), 27),
-        "season_id": season_id,                    # ✅ 新增：标记season
+        "season_id": season_id,                    # set season_id
         "anno": np.tile([a for a, w in wk], 1000),
         "settimana": np.tile([w for a, w in wk], 1000),
         "incidenza": arr.reshape(-1),

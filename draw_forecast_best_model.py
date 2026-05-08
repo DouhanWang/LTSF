@@ -1,3 +1,10 @@
+# Copyright 2026 DouhanWang. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
 import os
 import numpy as np
 import pandas as pd
@@ -9,7 +16,7 @@ import matplotlib.lines as mlines
 from pathlib import Path
 
 # ==========================================
-# 1. 颜色与基础配置 
+# 1. Color and setting definitions
 # ==========================================
 PAPER_COLORS = {
     "ARIMA_real": "#636363",
@@ -89,17 +96,15 @@ def get_model_identity(method, setting):
     return label, color_key
 
 # ==========================================
-# 2. 数据读取器 (含 .npy 转 .csv 拦截器)
+# 2. read data
 # ==========================================
 def get_csv_path_from_row(row, horizon):
-    """【核心转换器】：现在全宇宙都统一了，直接读取 rolling_pred_stepX.csv"""
+    """【read rolling_pred_stepX.csv"""
     source_path = Path(str(row["source_file"]).replace("\\", "/"))
-    run_dir = source_path.parent  # 只取文件夹路径
+    run_dir = source_path.parent  # only folder directory
     
-    # 无脑读取统一命名的 CSV
     csv_path = run_dir / f"rolling_pred_step{int(horizon)}.csv"
     
-    # 加个防呆设计，万一有下划线
     if not csv_path.exists(): 
         csv_path = run_dir / f"rolling_pred_step_{int(horizon)}.csv"
         
@@ -165,7 +170,7 @@ def load_pred_from_csv(csv_path, last_n=18):
     return _slice(p_vals), _slice(l_vals), _slice(u_vals)
 
 # ==========================================
-# 3. 绘图主逻辑
+# 3. Plotting function
 # ==========================================
 def plot_point_forecast_with_interval(
         metrics_csv="./results/metrics_tables/point_metrics_long_real_sim.csv",
@@ -176,14 +181,14 @@ def plot_point_forecast_with_interval(
     _paper_style_rcparams()
     
     if not os.path.exists(metrics_csv):
-        print(f"Error: 找不到总表 {metrics_csv}")
+        print(f"Error: Cannot find {metrics_csv}")
         return
 
     df_metrics = pd.read_csv(metrics_csv)
     df_sub = df_metrics[
         (df_metrics["dataset_type"] == "real") &
         (df_metrics["step"] == horizon) &
-        (df_metrics["metric"] == metric_type)  # 动态过滤 MAE 或 IS80_mean
+        (df_metrics["metric"] == metric_type)  
     ]
 
     fig, axes = plt.subplots(3, 3, figsize=(16, 12))
@@ -199,7 +204,7 @@ def plot_point_forecast_with_interval(
             continue
 
         # ----------------------------------------------------
-        # 1. 提取 Ground Truth (用 Naive 定位)
+        # 1. Get Ground Truth (Use Naive )
         # ----------------------------------------------------
         naive_row = df_c[df_c["method"].str.lower() == "naive"]
         if naive_row.empty:
@@ -223,7 +228,7 @@ def plot_point_forecast_with_interval(
         ax.axvline(x=3, color='gray', linestyle=':', linewidth=1.5, alpha=0.8, zorder=49)
 
         # ----------------------------------------------------
-        # 2. 查表找最好模型
+        # 2. Find best model
         # ----------------------------------------------------
         method_key = df_c["method"].astype(str).str.strip().str.lower()
         respi_row = df_c[method_key == "respicast"]
@@ -240,9 +245,7 @@ def plot_point_forecast_with_interval(
             metric_display = "IS" if metric_type == "WIS80_mean" else metric_type
             print(f"[{country}] 查表锁定 {metric_display} 最强: {best_row['method']} {m_set_str} ({metric_display}: {best_row['value']:.2f})")
 
-        # ----------------------------------------------------
-        # 3. 拿到确切的 csv_path 画图 (自动避开 .npy)
-        # ----------------------------------------------------
+
         for i, row in enumerate(rows_to_plot):
             m_name = row["method"]
             m_set  = row["train_setting"]
@@ -265,9 +268,7 @@ def plot_point_forecast_with_interval(
 
             plotted_global_labels[label] = color
 
-        # ----------------------------------------------------
-        # 4. X 轴美化
-        # ----------------------------------------------------
+
         tick_idx = np.linspace(0, len_t - 1, min(6, len_t), dtype=int)
         ax.set_xticks(tick_idx)
         
@@ -290,7 +291,7 @@ def plot_point_forecast_with_interval(
         if c == 0: 
             ax.set_ylabel("Incidence", fontsize=13)
             
-        # 【核心修改】：只在最后一行 (r == 2) 显示 X 轴标签和 Date 标题
+        # Show only on the last row (r == 2) X-axis labels and Date title
         if r == 2: 
             ax.set_xticklabels(formatted_dates, rotation=25, ha="right")
             ax.set_xlabel("Date", fontsize=13)
@@ -299,7 +300,7 @@ def plot_point_forecast_with_interval(
             ax.tick_params(axis='x', bottom=True, labelbottom=False) # 保留短刻度线，但不显示文字
 
     # ----------------------------------------------------
-    # 5. 全局图例
+    # 5. Legend
     # ----------------------------------------------------
     legend_elements = [
         mlines.Line2D([], [], color='black', marker='o', markersize=4, linestyle='None', label='True Data'),
@@ -325,10 +326,10 @@ def plot_point_forecast_with_interval(
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     fig.savefig(out_path, dpi=800, bbox_inches="tight")
     plt.close(fig)
-    print(f"\n[大功告成] 图表已保存至: {out_path}")
+    print(f"\n Saved to: {out_path}")
 
 if __name__ == "__main__":
-    # 1. 生成基于 MAE 排名的绘图
+    # 1. Based on MAE ranking
     plot_point_forecast_with_interval(
         metrics_csv="./results/metrics_tables/point_metrics_long_real_sim.csv",
         horizon=4,
@@ -336,10 +337,10 @@ if __name__ == "__main__":
         out_path="./test_results/montages/all_countries_forecast_step4_MAE_Interval.pdf"
     )
 
-    # 2. 生成基于 IS 排名的绘图
+    # 2. Based on IS ranking
     plot_point_forecast_with_interval(
         metrics_csv="./results/metrics_tables/point_metrics_long_real_sim.csv",
         horizon=4,
-        metric_type="WIS80_mean",  # 注意：在 csv 里这个指标叫 WIS80_mean
+        metric_type="WIS80_mean",  # Note: This metric is called WIS80_mean in the CSV
         out_path="./test_results/montages/all_countries_forecast_step4_WIS_Interval.pdf"
     )

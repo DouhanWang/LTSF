@@ -1,3 +1,10 @@
+# Copyright 2026 DouhanWang. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -13,14 +20,14 @@ COUNTRIES = [
 ]
 COUNTRY_LOWER = {c.lower(): c for c in COUNTRIES}
 
-# 把 Ensembleun 放在 Ensemble 前面！
+
 METHODS = ["Naive", "ARIMA", "SEIR", "DLinear", "LSTM", "Autoformer", "TabPFN_ts", "Respicast", "Ensembleun", "Ensemble"]
 METHODS_BY_PREFIX = sorted(METHODS, key=len, reverse=True)
 TRAIN_SETTINGS = ["real", "augmented", "combined"]
 STEPS = [1, 2, 3, 4]
 
 # ==========================================
-# 强制时间窗口标尺 (保障评估绝对公平)
+# Alignment of dates for each step (based on the new evaluation protocol)
 # ==========================================
 NEW_DATES = [
     "11/11/2024", "18/11/2024", "25/11/2024", "02/12/2024", "09/12/2024",
@@ -31,7 +38,7 @@ NEW_DATES = [
 ]
 TARGET_LENGTHS = {1: 21, 2: 20, 3: 19, 4: 18}
 
-# ---------- Metrics 函数 ----------
+# ---------- Metrics ----------
 def mae(y, yhat):
     return float(np.mean(np.abs(y - yhat)))
 
@@ -54,7 +61,7 @@ def normalize_dates_ddmmyyyy(date_series: pd.Series):
     formatted = parsed.dt.strftime("%d/%m/%Y")
     return formatted.where(parsed.notna(), raw)
 
-# ---------- 信息提取 Helper ----------
+# ---------- Extract info Helper ----------
 def infer_dataset_type(path: Path) -> str:
     s = str(path).lower()
     return "simulated" if "simulated" in s else "real"
@@ -79,12 +86,12 @@ def infer_country_method_trainsetting(path: Path):
         train_setting = next((t for t in TRAIN_SETTINGS if f"_{t}_" in padded_run_name), "")
     return country, method, train_setting
 
-# ---------- 主程序 ----------
+# ---------- Main program ----------
 def main():
-    print("[INFO] 开始生成绝对公平的统一评估指标 (MAE, wMAPE, WIS80)...")
+    print("[INFO] Generating unified evaluation metrics (MAE, wMAPE, WIS80)...")
     point_files = [(step, p) for step in STEPS for p in ROOT.rglob(f"*rolling_pred_step{step}.csv")]
 
-    # 1. 建立以日期为索引的超级真实值字典 (date -> true_value)
+    # 1. Build a super ground truth dictionary indexed by date (date -> true_value)
     ref_true = {} 
     for step, p in point_files:
         dt = infer_dataset_type(p)
@@ -104,13 +111,12 @@ def main():
 
     rows = []
 
-    # 2. 计算点预测指标：MAE 和 wMAPE
+    # 2. Calculate point prediction metrics: MAE and wMAPE
     for step, p in point_files:
         dt = infer_dataset_type(p)
         country, method, train_setting = infer_country_method_trainsetting(p)
         if country is None or method is None: continue
 
-        # 【核心拦截】：获取当前 Step 必须评估的合法日期！
         expected_len = TARGET_LENGTHS.get(step, 21)
         expected_dates = set(NEW_DATES[-expected_len:])
 
@@ -118,7 +124,7 @@ def main():
             df = pd.read_csv(p)
             if "date" not in df.columns: continue
             
-            # 统一日期格式为 DD/MM/YYYY 再过滤
+            # Normalize date format to DD/MM/YYYY before filtering
             df["date_str"] = normalize_dates_ddmmyyyy(df["date"])
             df = df[df["date_str"].isin(expected_dates)]
 
@@ -156,9 +162,9 @@ def main():
                     "n_used": len(y_t), "source_file": str(p)
                 })
         except Exception as e:
-            print(f"[WARN] 处理 CSV 失败 {p}: {e}")
+            print(f"[WARN] Failed to process CSV {p}: {e}")
 
-    # 3. 读取 WIS (.npy)
+    # 3. Read WIS (.npy)
     for step in STEPS:
         for p in ROOT.rglob(f"*wis80_point_step{step}.npy"):
             dt = infer_dataset_type(p)
@@ -177,7 +183,7 @@ def main():
             except Exception:
                 pass
 
-    # 4. 生成大表并去重
+    # 4. Generate output DataFrame and save
     df_out = pd.DataFrame(rows)
     if not df_out.empty:
         df_out = df_out.drop_duplicates(
@@ -186,8 +192,8 @@ def main():
         )
     
     df_out.to_csv(OUT_PATH, index=False)
-    print("\n[OK] 评估大表已生成！")
-    print(f"[OUT] 存储位置: {OUT_PATH}")
+    print("\n[OK] Finished!")
+    print(f"[OUT] Save directory: {OUT_PATH}")
 
 if __name__ == "__main__":
     main()

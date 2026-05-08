@@ -1,3 +1,10 @@
+# Copyright 2026 DouhanWang. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
 import pandas as pd
 import matplotlib
 
@@ -95,7 +102,7 @@ mae_wins.index = mae_wins.index.map(display_model_label)
 wis_wins.index = wis_wins.index.map(display_model_label)
 
 # ── plot ──────────────────────────────────────────────────────────────────────
-# 使用高级的非饱和/莫兰迪色系 (Muted/Pastel)
+
 STEP_COLORS = ["#9ecae1", "#6baed6", "#3182bd", "#08519c"]
 STEP_LABELS = ["Step 1", "Step 2", "Step 3", "Step 4"]
 
@@ -120,7 +127,7 @@ def make_bar_chart(wins_df, title, ax, show_legend=True):
     ax.set_ylim(0, 9)
     ax.yaxis.set_major_locator(plt.MultipleLocator(1))
     
-    # 只有当 show_legend 为 True 时才绘制图例
+    
     if show_legend:
         ax.legend(title="Forecast horizon", fontsize=15, title_fontsize=16)
         
@@ -131,7 +138,7 @@ def make_bar_chart(wins_df, title, ax, show_legend=True):
 
 fig, axes = plt.subplots(2, 1, figsize=(14, 10))
 
-# 去掉了 fig.suptitle，并为下方第一张图开启图例，第二张图关闭图例
+
 make_bar_chart(mae_wins, "MAE — model wins per forecast step", axes[0], show_legend=True)
 make_bar_chart(wis_wins, "IS₈₀ — model wins per forecast step", axes[1], show_legend=False)
 

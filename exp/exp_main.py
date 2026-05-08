@@ -1,3 +1,7 @@
+# Copyright 2022 DLinear Authors.
+# Licensed under the Apache License, Version 2.0
+# 
+# --- Modified by DouhanWang in 2026 ---
 from epi4cast.data_provider.data_factory import data_provider
 from epi4cast.exp.exp_basic import Exp_Basic
 from epi4cast.models import Informer, Autoformer, Transformer, DLinear, Linear, NLinear, LSTM, Naive, ARIMA
@@ -26,8 +30,8 @@ class Exp_Main(Exp_Basic):
     def __init__(self, args):
         super(Exp_Main, self).__init__(args)
         self.global_sigma = None # sd
-        self.res_q_low = None   # ✅ 保存每个 horizon 的 q10 residual
-        self.res_q_high = None  # ✅ 保存每个 horizon 的 q90 residual
+        self.res_q_low = None   # save each horizon's q10 residual
+        self.res_q_high = None  # save each horizon's q90 residual
 
     def _build_model(self):
         model_dict = {
@@ -58,7 +62,6 @@ class Exp_Main(Exp_Basic):
         return model_optim
 
     def _select_criterion(self):
-        #criterion = nn.MSELoss()
         if self.args.loss == 'mse':
             criterion = nn.MSELoss()
         elif self.args.loss == 'mae':
@@ -130,10 +133,10 @@ class Exp_Main(Exp_Basic):
 
     def _calibrate_residual_quantiles(self, vali_data, vali_loader, alpha=0.2):
         """
-        用 validation 的所有窗口、所有 horizon 残差，计算分位数残差区间：
+        use validation data's all windows and horizons to compute quantile residual intervals:
           q_low[h] = quantile(residual_h, alpha/2)
           q_high[h] = quantile(residual_h, 1-alpha/2)
-        返回 q_low, q_high，长度 pred_len
+        return q_low, q_high with length pred_len
         """
         pred_len = self.args.pred_len
         residuals = [[] for _ in range(pred_len)]
@@ -146,7 +149,7 @@ class Exp_Main(Exp_Basic):
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
-                # decoder input（跟你 vali/test 保持一致）
+                # decoder input（keep same as vali/test）
                 dec_inp = torch.zeros_like(batch_y[:, -pred_len:, :]).float()
                 dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
 
@@ -165,12 +168,12 @@ class Exp_Main(Exp_Basic):
                 pred_np = outputs.detach().cpu().numpy()
                 true_np = true.detach().cpu().numpy()
 
-                # ✅ 统一到真实尺度后再算 residual（非常关键）
+                #  transform to real scale and then compute residual
                 if vali_data.scale:
                     pred_np = self._inverse_3d(vali_data, pred_np)
                     true_np = self._inverse_3d(vali_data, true_np)
 
-                # ✅ 只取 target（最后一列）
+                # target（last column）
                 pred_t = pred_np[..., -1]  # (B, pred_len)
                 true_t = true_np[..., -1]  # (B, pred_len)
 
@@ -184,7 +187,7 @@ class Exp_Main(Exp_Basic):
 
         for h in range(pred_len):
             if len(residuals[h]) == 0:
-                # fallback：如果某个 horizon 没数据，设为 0（很少发生）
+                # fallback：If a horizon h has no data, set to 0 (rare)
                 q_low[h] = 0.0
                 q_high[h] = 0.0
                 continue
@@ -216,7 +219,7 @@ class Exp_Main(Exp_Basic):
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
         # ==========================
-        # 记录每个epoch的loss，用于画history曲线
+        # record loss for each epoch, used to plot history curves
         # ==========================
         train_loss_history = []
         vali_loss_history = []
@@ -296,12 +299,10 @@ class Exp_Main(Exp_Basic):
             train_loss_history.append(train_loss)
 
             if not self.args.train_only:
-                # vali_loss = self.vali(vali_data, vali_loader, criterion)
-                # test_loss = self.vali(test_data, test_loader, criterion)
+
                 vali_loss, _, _ = self.vali(vali_data, vali_loader, criterion)  # Update this line
                 vali_loss_history.append(vali_loss)
-                # test_loss, _, _ = self.vali(test_data, test_loader, criterion)
-                # 旧逻辑：每个epoch都在test上算loss；现在不需要，避免训练过程中反复查看test
+
 
                 print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f}".format(
                     epoch + 1, train_steps, train_loss, vali_loss)) #Test Loss: {4:.7f} , test_loss
@@ -316,34 +317,12 @@ class Exp_Main(Exp_Basic):
                 break
 
             adjust_learning_rate(model_optim, epoch + 1, self.args)
-        # # ==========================
-        # # 保存history plot到 logs/LookBackWindow/historyplot/
-        # # ==========================
-        # try:
-        #     history_dir = os.path.join('logs', 'LookBackWindow', 'historyplot')
-        #     os.makedirs(history_dir, exist_ok=True)
-        #
-        #     plt.figure()
-        #     plt.plot(train_loss_history, label='train_loss')
-        #     if len(vali_loss_history) > 0:
-        #         plt.plot(vali_loss_history, label='val_loss')
-        #     plt.xlabel('epoch')
-        #     plt.ylabel('loss')
-        #     plt.legend()
-        #
-        #     # 按你指定的命名规则
-        #     fname = f"{self.args.model}_simulated_Italy_ili_S_incidenza_sdscaler_uncertainty_{self.args.seq_len}_{self.args.moving_avg}.png"
-        #     plt.savefig(os.path.join(history_dir, fname), dpi=200, bbox_inches='tight')
-        #     plt.close()
-        #     print(f"Saved history plot: {os.path.join(history_dir, fname)}")
-        # except Exception as e:
-        #     print(f"Warning: could not save history plot. Error: {e}")
 
         best_model_path = path + '/' + 'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
         # --- NEW BLOCK TO CALCULATE SIGMA ---
         print("Calculating global sigma from validation set residuals...")
-        # ✅ NEW: 用 validation 残差分位数校准 80% 区间
+        # Use validation residuals to compute 80% interval
         if not self.args.train_only:
             try:
                 print("Calibrating residual quantiles on validation set for WIS(80%)...")
@@ -378,17 +357,7 @@ class Exp_Main(Exp_Basic):
         os.makedirs(plot_folder, exist_ok=True)
         os.makedirs(save_folder, exist_ok=True)
 
-        # ---------- 2) STITCH ONLY THE PREDICTIONS ----------
-        # test_target_len = len(test_data.data_x) - seq_len  # e.g. 20
-        # num_windows, _, C = preds.shape
-        #
-        # stitched_pred = np.full((test_target_len, C), np.nan, dtype=float)
-        #
-        # for w in range(num_windows):
-        #     for h in range(pred_len):
-        #         pos = w + h
-        #         if pos < test_target_len and np.isnan(stitched_pred[pos]).all():
-        #             stitched_pred[pos] = preds[w, h]
+
         # ==========================
         # ==========================
         # NEW: horizon-wise evaluation with extended forecast origins
@@ -419,12 +388,12 @@ class Exp_Main(Exp_Basic):
             if self.args.model == 'ARIMA':
                 # Use within-season history for ARIMA (proper ARIMA), not only seq_len points.
                 known0 = 4
-                obs_end = min(known0 + s, len(test_data.data_x))  # test 已知到哪（最多到 season 末尾）
+                obs_end = min(known0 + s, len(test_data.data_x))  # test （until end of season ）
 
-                # 1) 拼历史值
+                # 1) combine train history + test history (until obs_end) for encoder input
                 x_enc = np.vstack([train_data.data_x, test_data.data_x[:obs_end]])  # (L_hist, C)
 
-                # 2) 拼对应时间特征（和 x_enc 完全同长度）
+                # 2) combine corresponding time features (same length as x_enc)
                 x_mark = np.vstack([train_data.data_stamp, test_data.data_stamp[:obs_end]])  # (L_hist, mark_dim)
 
             else:
@@ -435,18 +404,15 @@ class Exp_Main(Exp_Basic):
             r_begin = s + seq_len - self.args.label_len
             r_end = r_begin + self.args.label_len + pred_len
 
-            # 如果 r_end 超过 T（越界），我们就用最后一个 stamp 继续“复制”时间特征（简化）
-            # 更严谨是按 weekly dates 外推再算 time_features，但复制在你的 timeF embedding 下通常也能跑通。
+            # if r_end exceeds T，we use last stamp to continue “copy”time_features
             if r_end <= len(test_data.data_stamp):
                 y_mark = test_data.data_stamp[r_begin:r_end]
             else:
                 y_mark = np.zeros((self.args.label_len + pred_len, test_data.data_stamp.shape[1]), dtype=float)
-                # 前面 label_len 用真实 stamp
                 y_mark[:self.args.label_len] = test_data.data_stamp[r_begin: r_begin + self.args.label_len]
-                # 未来 pred_len 简单复制最后一行 stamp（够你先跑通逻辑）
                 y_mark[self.args.label_len:] = test_data.data_stamp[-1]
 
-            # decoder input: label part 用真实 y（scaled），未来 pred_len 用 0
+            # decoder input: label part use real y（scaled），future pred_len use 0
             y_true_part = test_data.data_x[r_begin:r_begin + self.args.label_len]
             dec_zeros = np.zeros((pred_len, C), dtype=float)
             dec_inp = np.concatenate([y_true_part, dec_zeros], axis=0)
@@ -569,18 +535,6 @@ class Exp_Main(Exp_Basic):
                     lower_h = preds_h + float(self.res_q_low[h])
                     upper_h = preds_h + float(self.res_q_high[h])
 
-            # else:
-            #     real_sigma = self.global_sigma if self.global_sigma is not None else 0.0
-            #     if test_data.scale:
-            #         try:
-            #             if hasattr(test_data.scaler, 'min_'):
-            #                 real_sigma = real_sigma / test_data.scaler.scale_[-1]
-            #             elif hasattr(test_data.scaler, 'mean_'):
-            #                 real_sigma = real_sigma * test_data.scaler.scale_[-1]
-            #         except Exception as e:
-            #             print(f"Warning: could not reverscale sigma. Error: {e}")
-            #     lower_h = preds_h - 1.2816 * real_sigma
-            #     upper_h = preds_h + 1.2816 * real_sigma
 
             lower_h = np.clip(lower_h, a_min=0, a_max=None)
             # ---- NEW: per-point WIS (80% interval), for boxplots ----
@@ -660,62 +614,7 @@ class Exp_Main(Exp_Basic):
 
 
 
-    # def predict(self, setting, load=False):
-    #     pred_data, pred_loader = self._get_data(flag='pred')
-    #
-    #     if load:
-    #         path = os.path.join(self.args.checkpoints, setting)
-    #         best_model_path = path + '/' + 'checkpoint.pth'
-    #         self.model.load_state_dict(torch.load(best_model_path))
-    #
-    #     preds = []
-    #
-    #     self.model.eval()
-    #     with torch.no_grad():
-    #         for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(pred_loader):
-    #             batch_x = batch_x.float().to(self.device)
-    #             batch_y = batch_y.float()
-    #             batch_x_mark = batch_x_mark.float().to(self.device)
-    #             batch_y_mark = batch_y_mark.float().to(self.device)
-    #
-    #             # decoder input
-    #             dec_inp = torch.zeros([batch_y.shape[0], self.args.pred_len, batch_y.shape[2]]).float().to(batch_y.device)
-    #             dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
-    #             # encoder - decoder
-    #             if self.args.use_amp:
-    #                 with torch.cuda.amp.autocast():
-    #                     if 'Linear' in self.args.model:
-    #                         outputs = self.model(batch_x)
-    #                     else:
-    #                         if self.args.output_attention:
-    #                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
-    #                         else:
-    #                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
-    #             else:
-    #                 if 'Linear' in self.args.model:
-    #                     outputs = self.model(batch_x)
-    #                 else:
-    #                     if self.args.output_attention:
-    #                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
-    #                     else:
-    #                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
-    #             pred = outputs.detach().cpu().numpy()  # .squeeze()
-    #             preds.append(pred)
-    #
-    #     preds = np.array(preds)
-    #     preds = np.concatenate(preds, axis=0)
-    #     if (pred_data.scale):
-    #         preds = pred_data.inverse_transform(preds)
-    #
-    #     # result save
-    #     folder_path = './results/' + setting + '/'
-    #     if not os.path.exists(folder_path):
-    #         os.makedirs(folder_path)
-    #
-    #     np.save(folder_path + 'real_prediction.npy', preds)
-    #     pd.DataFrame(np.append(np.transpose([pred_data.future_dates]), preds[0], axis=1), columns=pred_data.cols).to_csv(folder_path + 'real_prediction.csv', index=False)
-    #
-    #     return
+
     def predict(self, setting, load=False):
         pred_data, pred_loader = self._get_data(flag='pred')
 

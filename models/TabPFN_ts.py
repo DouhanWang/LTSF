@@ -1,3 +1,10 @@
+# Copyright 2026 DouhanWang. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
 import argparse
 import os
 import numpy as np
@@ -16,11 +23,10 @@ from tabpfn_time_series.features import (
 )
 
 def _maybe_build_timestamp_from_year_week(df: pd.DataFrame) -> pd.DataFrame:
-    # 如果已经有 timestamp/date，就不动
     if "timestamp" in df.columns or "date" in df.columns:
         return df
 
-    # 如果有 anno + settimana，就自动生成 timestamp（周一）
+    # If there is anno + settimana，then generate timestamp（Monday）
     if "anno" in df.columns and "settimana" in df.columns:
         out = df.copy()
         out["timestamp"] = pd.to_datetime(
@@ -36,17 +42,17 @@ def _get_time_col(df: pd.DataFrame) -> str:
         return "timestamp"
     if "date" in df.columns:
         return "date"
-    raise ValueError("CSV 里需要有 'timestamp' 或 'date' 作为时间列。")
+    raise ValueError("CSV needs to have 'timestamp' or 'date'.")
 
 
 def _pad_future_rows(curr_test_df: pd.DataFrame, need_len: int, time_col: str, item_col: str, target_col: str):
-    """补齐未来时间戳，默认 freq=7D（周频）。"""
+    """freq=7D(weekly)"""
     if len(curr_test_df) >= need_len:
         return curr_test_df
 
     missing = need_len - len(curr_test_df)
     if curr_test_df.empty:
-        raise ValueError("curr_test_df 为空，无法补齐未来时间戳。请检查 train_end/test_size。")
+        raise ValueError("curr_test_df is empty, cannot pad future timestamps. Please check train_end/test_size.")
 
     last_t = pd.to_datetime(curr_test_df[time_col].iloc[-1])
     future_times = [last_t + pd.Timedelta(days=7 * (j + 1)) for j in range(missing)]
@@ -78,14 +84,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_path", type=str, required=True, help="CSV path")
     parser.add_argument("--out_dir", type=str, default="results/tabpfn_ts_rolling", help="output folder")
-    parser.add_argument("--item_id", type=int, default=None, help="只跑某一个 item_id（可选）")
+    parser.add_argument("--item_id", type=int, default=None, help="only run one item_id (optional)")
     parser.add_argument("--item_col", type=str, default="item_id", help="item id column name")
     parser.add_argument("--target", type=str, default="target", help="target column name")
-    parser.add_argument("--test_size", type=int, default=21, help="rolling 测试点数量（每次 origin +1）")
-    parser.add_argument("--pred_len", type=int, default=4, help="预测步数（默认 4）")
-    parser.add_argument("--freq_days", type=int, default=7, help="补未来时间戳的步长（天），周频=7")
+    parser.add_argument("--test_size", type=int, default=21, help="rolling test points (origin +1 each time)")
+    parser.add_argument("--pred_len", type=int, default=4, help="prediction steps (default 4)")
+    parser.add_argument("--freq_days", type=int, default=7, help="step size for padding future timestamps (days), weekly=7")
     parser.add_argument("--tabpfn_mode", type=str, default="client", choices=["client", "local"], help="TabPFNMode")
-    parser.add_argument("--seq_len", type=int, default=4, help="与其他模型对齐：跳过前 seq_len 个测试点，保证预测时已知前 seq_len 个观测值")
+    parser.add_argument("--seq_len", type=int, default=4, help="align with other models: skip first seq_len test points, ensure known observations before prediction")
     args = parser.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -98,27 +104,25 @@ def main():
         df_raw = df_raw.rename(columns={args.target: "target"})
         args.target = "target"
     if args.item_col not in df_raw.columns:
-        raise ValueError(f"找不到 item_col='{args.item_col}'，请检查 CSV 列名。")
+        raise ValueError(f"Cannot find item_col='{args.item_col}', please check CSV column names.")
 
     time_col = _get_time_col(df_raw)
     df_raw = df_raw.copy()
     df_raw[time_col] = pd.to_datetime(df_raw[time_col])
 
-    # 可选：只跑一个 item_id
     if args.item_id is not None:
         df_raw = df_raw[df_raw[args.item_col] == args.item_id].copy()
         df_raw = df_raw.sort_values(time_col).reset_index(drop=True)
 
-    # 必须保证 target 存在
     if args.target not in df_raw.columns:
-        raise ValueError(f"找不到 target='{args.target}' 列。")
+        raise ValueError(f"Cannot find target='{args.target}' column.")
 
     total_len = len(df_raw)
     test_size = int(args.test_size)
     pred_len = int(args.pred_len)
 
     if total_len <= test_size:
-        raise ValueError(f"数据太短 total_len={total_len} <= test_size={test_size}，无法 rolling。")
+        raise ValueError(f"Data is too short total_len={total_len} <= test_size={test_size}, cannot roll.")
 
     train_end_index = total_len - test_size
 
@@ -132,7 +136,7 @@ def main():
     print(f"Train end starts at index {train_end_index}")
     print(f"Time column: {time_col} | Item column: {args.item_col} | Target: {args.target}")
 
-    # 保存：按 step(1..pred_len) 分开存
+    # Save step(1..pred_len)
     all_predictions_by_step = {step: [] for step in range(1, pred_len + 1)}
 
     seq_len = int(args.seq_len)
@@ -153,9 +157,8 @@ def main():
             if curr_test_df.empty:
                 break
 
-            # 不够 pred_len 就补未来时间戳（只为能算 step3/4）
             if len(curr_test_df) < pred_len:
-                # 用 args.freq_days 而不是写死 7
+
                 last_t = pd.to_datetime(curr_test_df[time_col].iloc[-1])
                 missing = pred_len - len(curr_test_df)
                 future_times = [last_t + pd.Timedelta(days=args.freq_days * (j + 1)) for j in range(missing)]
@@ -169,7 +172,7 @@ def main():
             if len(curr_test_df) < step:
                 continue
 
-            # TabPFN_ts：test 的 target 必须 mask 成 NaN
+            # TabPFN_ts：test target must mask as NaN
             curr_test_df[args.target] = np.nan
 
             # TSDF

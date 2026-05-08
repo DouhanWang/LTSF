@@ -1,3 +1,7 @@
+# Copyright 2022 DLinear Authors.
+# Licensed under the Apache License, Version 2.0
+# 
+# --- Modified by DouhanWang in 2026 ---
 import argparse
 import os
 import matplotlib.pyplot as plt

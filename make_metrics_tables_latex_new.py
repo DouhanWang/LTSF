@@ -1,3 +1,10 @@
+# Copyright 2026 DouhanWang. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -12,7 +19,7 @@ COUNTRIES = ["Belgium","Czechia","Denmark","France","Ireland","Italy","Netherlan
 STEPS = [1, 2, 3, 4]
 ALL_METRICS = ["MAE", "wMAPE", "WIS80_mean"]
 
-# Flat column order: 确保与 all_metrics.py 抓取的名字绝对一致
+# Flat column order
 COL_PLAN = [
     ("Naive",      ""),
     ("ARIMA",      ""),
@@ -28,7 +35,7 @@ COL_PLAN = [
     ("TabPFN_ts",  ""),
     ("Respicast",  ""),
     ("Ensemble",   ""),
-    ("Ensembleun", ""),  # 新增的 Unweighted Ensemble
+    ("Ensembleun", ""),
 ]
 
 # Header groups for row 1:
@@ -41,7 +48,7 @@ HEADER_GROUPS = [
     ("TabPFN\\_ts", 1, True,  [""]),
     ("Respicast",   1, True,  [""]),
     ("Ensemble",    1, True,  [""]),
-    ("Ensemble\\_un",1, True,  [""]),  # 新增，表头显示带下划线
+    ("Ensemble\\_un",1, True,  [""]), 
 ]
 
 # colspec: ll (Country, Step) + one group per HEADER_GROUPS entry

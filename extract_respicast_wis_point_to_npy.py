@@ -1,3 +1,10 @@
+# Copyright 2026 DouhanWang. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
 import os
 import numpy as np
 import pandas as pd
@@ -8,8 +15,9 @@ OUT_ROOT = "results"
 START_ORIGIN = "2024-11-17"
 END_ORIGIN = "2025-04-09"
 
-# 9个国家：code -> full name（你按实际需要改/增）
+
 COUNTRY_MAP = {
+    "BE": "Belgium",
     "CZ": "Czechia",
     "DK": "Denmark",
     "FR": "France",
@@ -18,9 +26,7 @@ COUNTRY_MAP = {
     "NL": "Netherlands",
     "PL": "Poland",
     "RO": "Romania",
-    "BE": "Belgium",
-    # 如果你9国里包含AT等，就加：
-    # "AT": "Austria",
+
 }
 
 TEAM_ID = "respicast"
@@ -46,7 +52,7 @@ def pick_point_metric(df: pd.DataFrame) -> str | None:
 
 
 def safe_name(name: str) -> str:
-    # 文件夹名更稳：空格->下划线
+
     return name.strip().replace(" ", "_")
 
 

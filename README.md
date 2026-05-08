@@ -1,119 +1,142 @@
-<<<<<<< HEAD
-# From naive to foundation: benchmarking models for epidemic forecasting
+# From Naive to Foundation: Benchmarking Models for Epidemic Forecasting
 
-This repo is the official Pytorch implementation of epi4cast: "[From naive to foundation: benchmarking models for epidemic forecasting](https://)". 
+This repository contains the PyTorch implementation of epi4cast for the manuscript "From Naive to Foundation: Benchmarking Models for Epidemic Forecasting".
 
+The code benchmarks statistical, neural, and foundation-model approaches for weekly influenza-like illness (ILI) forecasting across European countries. The main forecasting setup uses rolling 1- to 4-week-ahead evaluation over influenza-season windows.
 
 ## Updates
-- [2026/05/08] We update some scripts for ARIMA. 
-  - .
+
+- 2026-05-08: Updated the ARIMA pipeline to use non-seasonal auto-ARIMA with rolling-origin refitting.
+- 2026-05-08: Cleaned the experiment scripts and standardized look-back-window experiments across countries.
+
+## Implemented Models
+
+The main experiments include:
+
+- Naive baseline
+- Auto-ARIMA
+- DLinear
+- LSTM
+- Autoformer
+- TabPFN-TS
+- Weighted and unweighted ensembles
+- RespiCast hub ensemble baseline
+
+## Repository Structure
+
+| Path | Description |
+| --- | --- |
+| `data_provider/` | Data loading and split logic for ILI forecasting datasets. |
+| `models/` | Forecasting model implementations. |
+| `exp/` | Training, rolling evaluation, metric computation, and prediction export logic. |
+| `scripts/EXP-LookBackWindow/` | PowerShell scripts for look-back-window experiments across countries and models. |
+| `dataset/` | Input data directory. Raw data and processed country-level CSV files should be placed here. |
+| `results/` | Saved predictions, metrics, and generated metric tables. |
+| `test_results/` | Forecast plots and diagnostic figures. |
 
 
+## Environment
 
+First, install Conda. The main PyTorch environment can be created with:
 
-## Features
-- [x] Support scripts on different [look-back window size](https://github.com/cure-lab/DLinear/tree/main/scripts/EXP-LookBackWindow).
-- [x] [Autoformer](https://arxiv.org/abs/2106.13008) (NeuIPS 2021)
-
-
-## Detailed Description
-We provide all experiment script files in `./scripts`:
-| Files      |                              Interpretation                          |
-| ------------- | -------------------------------------------------------| 
-| EXP-LookBackWindow      | Study the impact of different look-back window sizes   | 
-
-
-This code is simply built on the code base of Autoformer. We appreciate the following GitHub repos a lot for their valuable code base or datasets:
-
-The implementation of Autoformer is from https://github.com/thuml/Autoformer
-
-## Getting Started
-### Environment Requirements
-
-First, please make sure you have installed Conda. Then, our environment can be installed by:
-```
+```bash
 conda create -n ltsf-gpu python=3.10 -y
 conda activate ltsf-gpu
-pip install -r requirements.txt
+pip install -r requirements-core.txt
+pip install -r requirements-torch-cu121.txt
 ```
 
-TabPFN-ts uses another environment, it can be installed by:
-```
+TabPFN-TS uses a separate environment:
+
+```bash
 conda create -n tabpfn-ts python=3.10 -y
 conda activate tabpfn-ts
 python -m pip install -U pip setuptools wheel
-python -m pip install --no-cache-dir --prefer-binary "numpy==1.26.4" "tqdm==4.67.1" "huggingface-hub>=0.34,<1.0" "datasets>=2.15,<4.0"
-python -m pip install --no-cache-dir --prefer-binary tabpfn-time-series==1.0.8
+python -m pip install -r requirements-tabpfn.txt
 ```
 
-And you can validate if the environment "tabpfn-ts" is installed by
-```
+To verify the TabPFN-TS installation:
+
+```bash
 python -c "import tabpfn_time_series; print('OK')"
 ```
-### Data Preparation
 
-Respicast Ensemble forecasts: 
+## Data Preparation
 
-ILI/ARI 2024/25: https://github.com/european-modelling-hubs/RespiCast-SyndromicIndicators/tree/main/model-output/respicast-hubEnsemble
+Place all raw and processed data files under `./dataset`.
 
-ILI datasaet:For seasons 2017-2018，2018-2019, https://github.com/european-modelling-hubs/flu-forecast-hub_archive/blob/main/target-data/latest-ILI_incidence.csv，
-             For seasons 2023-2024，2024-2025, https://github.com/european-modelling-hubs/RespiCast-SyndromicIndicators/blob/main/target-data/latest-ILI_incidence.csv source from ERVISS
-Incidence means per 100,000 population
+Primary data sources:
 
-**Please put them in the `./dataset` directory**
+- RespiCast hub ensemble forecasts for ILI/ARI 2024-2025: https://github.com/european-modelling-hubs/RespiCast-SyndromicIndicators/tree/main/model-output/respicast-hubEnsemble
+- ILI incidence for 2017-2018 and 2018-2019: https://github.com/european-modelling-hubs/flu-forecast-hub_archive/blob/main/target-data/latest-ILI_incidence.csv
+- ILI incidence for 2023-2024 and 2024-2025: https://github.com/european-modelling-hubs/RespiCast-SyndromicIndicators/blob/main/target-data/latest-ILI_incidence.csv
 
-### Training Example
-- In `scripts/ `, we provide the model implementation *Dlinear/Autoformer/Informer/Transformer*
+ILI incidence is measured per 100,000 population.
 
-For example:
+Useful preprocessing scripts:
 
-In order to run it on Windows, you can first generate a ps1 version script and use the following code: 
-```
+- `extract_raw_data.py`: extract target ILI data from raw surveillance files.
+- `extract_respicast_point_pred.py` and `extract_respicast_wis_point_to_npy.py`: extract RespiCast point forecasts and interval-score inputs.
+- `check_missing_wis_rows.py`: check missing RespiCast WIS rows.
+- `recompute_wis.py`: recompute IS80/WIS80 where needed.
+- `data_handling.py`: convert simulated exogenous `.npy` data into CSV format.
+- `data_combine.py`: combine observed and simulated trajectories into combined datasets.
+- `data_augmentation.py`: generate endogenous augmented trajectories and combine them with observed data.
+- `plot_dataset_series.py`: visualize the processed country-level time series before training.
+
+## Running Experiments
+
+The main experiment scripts are in `scripts/EXP-LookBackWindow/`.
+
+To run one model script on Windows, for example Autoformer:
+
+```powershell
 powershell -ExecutionPolicy Bypass -File scripts\EXP-LookBackWindow\Autoformer_LookBackWindow.ps1
 ```
-To run all the models across all countries, use
-```
-cd C:\Users\15952\Desktop\qm
-powershell -ExecutionPolicy Bypass -File epi4cast\scripts\EXP-LookBackWindow\run_all_countries.ps1
-```
 
-If you want to use specific environment, you can
-```
-conda run -n tabpfn-ts --no-capture-output powershell -ExecutionPolicy Bypass -File .\epi4cast\scripts\EXP-LookBackWindow\run_all_countries.ps1
-```
-Before training, use plot_dataset_series.py to visualize data.
+To run the all-country experiment script:
 
-After training and prediction, use postprocess_nonneg_dlinear.py to make sure all the predictions are non-negative.
-
-Use extract_respicast_point_pred.npy and extract_respicast_wis_point_to_npy.py to get predictions from Respicast, and use check_missing_wis_rows.py to check missing wis in Repicast，we found that there are some missing values for wis, so we use recompute_wis.py to recompute the wis80 for Respicast.
-
-Use fix_column_names_preds.py to fix column names for all prediction files and use fix_wis_length.py to make sure all wis have correct length.
-
-Use Ensemble.py to get pred of ensemble of our models and recompute_wis.py to compute wis80 for the ensemble.
-
-Use all_metrics.py to compute csv for all metrics and make_metrics_tables_latex.py to get a latex table.
-
-Use draw_forecast.py to get point forecast for all countries for all steps, use draw_forecast_best_model.py to get point forecast for Respicast and our best model, use WIS_plot.py and rAE_plot.py to get plots for relative IS and rAE.
-
-Use plot_win_counts.py to plot win counts
-
-
-
-
-
-
-## Citing
-
-If you find this repository useful for your work, please consider citing it as follows:
-
-```BibTeX
-
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\EXP-LookBackWindow\run_all_countries.ps1
 ```
 
-Please remember to cite all the datasets and compared methods if you use them in your experiments.
+The `run_all_countries.ps1` script contains the active model list and dataset settings. Edit the `$models` variable to select the models to run.
 
+TabPFN-TS should be run in the `tabpfn-ts` environment:
 
+```powershell
+conda run -n tabpfn-ts --no-capture-output powershell -ExecutionPolicy Bypass -File scripts\EXP-LookBackWindow\run_all_countries.ps1
+```
 
+## Post-Processing and Evaluation
 
+After training and prediction:
 
+- `postprocess_nonneg_dlinear.py`: enforce non-negative DLinear predictions.
+- `fix_column_names_preds.py`: standardize prediction file column names.
+- `fix_wis_length.py`: check and fix interval-score vector lengths.
+- `Ensemble.py`: build the weighted ensemble from model predictions.
+- `Unweighted_Ensemble.py`: build the unweighted ensemble baseline.
+- `recompute_wis.py`: compute IS80/WIS80 for model and ensemble predictions.
+- `all_metrics.py`: compute point and interval metrics.
+- `make_metrics_tables_latex.py`: generate LaTeX metric tables.
+- `draw_forecast.py`: plot forecasts for all countries and horizons.
+- `draw_forecast_best_model.py`: compare RespiCast and the best-performing model.
+- `WIS_plot.py`: plot relative interval-score results.
+- `rAE_plot.py`: plot relative absolute-error results.
+- `plot_win_counts.py`: plot model win counts across countries and horizons.
 
+## Citation
+
+If you find this repository useful, please cite the manuscript:
+
+```bibtex
+@article{epi4cast2026,
+  title = {From Naive to Foundation: Benchmarking Models for Epidemic Forecasting},
+  author = {},
+  journal = {},
+  year = {2026}
+}
+```
+
+This project is built upon [[DLinear's GitHub Link](https://github.com/cure-lab/LTSF-Linear)] and has been modified and extended with new features under the Apache License 2.0. The copyright of the original code belongs to the DLinear Authors.

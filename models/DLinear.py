@@ -1,3 +1,7 @@
+# Copyright 2022 DLinear Authors.
+# Licensed under the Apache License, Version 2.0
+# 
+# --- Modified by DouhanWang in 2026 ---
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

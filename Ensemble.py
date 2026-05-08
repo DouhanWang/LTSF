@@ -1,11 +1,16 @@
+# Copyright 2026 DouhanWang. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
 import argparse
 from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# ==========================================
-# 绝对真理：完美的日期与长度映射表
-# ==========================================
+
 TARGET_LENGTHS = {1: 21, 2: 20, 3: 19, 4: 18}
 NEW_DATES = [
     "11/11/2024", "18/11/2024", "25/11/2024", "02/12/2024", "09/12/2024",
@@ -16,12 +21,12 @@ NEW_DATES = [
 ]
 
 # -----------------------------
-# 1. 从 NPY 读取 WIS
+# 1. From NPY read IS
 # -----------------------------
 def load_mean_wis_from_npy(run_dir: Path, step: int) -> float:
     p = run_dir / f"wis80_point_step{step}.npy"
     if not p.exists():
-        raise FileNotFoundError(f"找不到 WIS 文件: {p}")
+        raise FileNotFoundError(f"Cannot find IS file: {p}")
     return float(np.nanmean(np.load(p)))
 
 def normalize_dates_ddmmyyyy(date_series: pd.Series):
@@ -39,19 +44,17 @@ def normalize_dates_ddmmyyyy(date_series: pd.Series):
     formatted = parsed.dt.strftime("%d/%m/%Y")
     return formatted.where(parsed.notna(), raw)
 
-# -----------------------------
-# 2. 读取 CSV 并立刻转化为干净的数据字典
-# -----------------------------
+
 def load_clean_df(path: Path):
     df = pd.read_csv(path)
 
-    # 统一日期格式为 DD/MM/YYYY
+    # date DD/MM/YYYY
     if "date" in df.columns:
         date_series = normalize_dates_ddmmyyyy(df["date"])
     else:
         date_series = None
 
-    # 支持 pred / median / mean / pred_step{N} 列名
+    # support pred / median / mean / pred_step{N} column names
     pred_col = next((c for c in df.columns if c in ("pred", "median", "mean") or c.startswith("pred_step")), None)
     if pred_col is None:
         raise KeyError("pred")
@@ -91,7 +94,7 @@ def align_to_expected_dates(df: pd.DataFrame, expected_dates: list[str], source)
     return df.sort_values("date_cat").drop(columns=["date_cat"]).reset_index(drop=True)
 
 # -----------------------------
-# 3. 提取基准 True
+# 3.get True
 # -----------------------------
 def get_ref_true(results_root: Path, country: str, target: str, expected_dates: list):
     cands = sorted(list(results_root.rglob("*.csv")), key=lambda p: 0 if "naive" in str(p).lower() else 1)
@@ -110,9 +113,7 @@ def get_ref_true(results_root: Path, country: str, target: str, expected_dates: 
             continue
     return None
 
-# -----------------------------
-# 4. 融合逻辑 (绝不丢数据的绝对对齐)
-# -----------------------------
+
 def weighted_ensemble(dfs: list[pd.DataFrame], mean_wis_list: list[float], expected_dates: list):
     wis = np.array(mean_wis_list, dtype=float)
     wis = np.where(np.isfinite(wis) & (wis > 0), wis, np.inf)
@@ -140,9 +141,7 @@ def weighted_ensemble(dfs: list[pd.DataFrame], mean_wis_list: list[float], expec
         
     return out, w
 
-# -----------------------------
-# 5. 主程序与成员配置
-# -----------------------------
+
 fixed_members = [
     ("ARIMA", "real"),
     ("SEIR", "real"),
@@ -160,7 +159,7 @@ def run_one_country(results_root: Path, country: str, target: str):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     for step in [1, 2, 3, 4]:
-        # 【核心魔法】：直接锁定当前 step 应该有多少行，提取对应的日期
+
         target_len = TARGET_LENGTHS[step]
         expected_dates = NEW_DATES[-target_len:]
 
@@ -170,7 +169,7 @@ def run_one_country(results_root: Path, country: str, target: str):
         chosen_meanwis = []
         chosen_tags = []
 
-        # --- 固定的成员 ---
+
         for model, data in fixed_members:
             folder = f"{model}_{data}_{country}_{target}"
             run_dir = results_root / folder
@@ -179,7 +178,7 @@ def run_one_country(results_root: Path, country: str, target: str):
             fcsv = run_dir / f"rolling_pred_step{step}.csv"
             
             df = load_clean_df(fcsv)
-            # 严格按照期待的日期切片，保证长度完全对齐！
+
             df = align_to_expected_dates(df, expected_dates, fcsv)
 
             if ref_true_df is not None:
@@ -189,7 +188,7 @@ def run_one_country(results_root: Path, country: str, target: str):
             chosen_meanwis.append(mean_wis)
             chosen_tags.append(folder)
 
-        # --- 可选的成员 ---
+
         for model, data_list in selectable_members:
             best = None
             for data in data_list:
@@ -209,7 +208,7 @@ def run_one_country(results_root: Path, country: str, target: str):
             fcsv = run_dir / f"rolling_pred_step{step}.csv"
             
             df = load_clean_df(fcsv)
-            # 严格按照期待的日期切片！
+
             df = align_to_expected_dates(df, expected_dates, fcsv)
 
             if ref_true_df is not None:
@@ -219,16 +218,16 @@ def run_one_country(results_root: Path, country: str, target: str):
             chosen_meanwis.append(mean_wis)
             chosen_tags.append(folder)
 
-        # 融合与保存
+
         ens_df, weights = weighted_ensemble(chosen_dfs, chosen_meanwis, expected_dates)
         out_path = out_dir / f"rolling_pred_step{step}.csv"
         ens_df.to_csv(out_path, index=False)
 
         print(f"\n=== Ensemble {country} {target} step{step} ===")
-        print(f"  --> 强制对齐长度: {target_len} 个点")
+        print(f"  --> Same length: {target_len} points")
         for tag, mw in zip(chosen_tags, chosen_meanwis):
-            print(f"  成员: {tag:35s} | meanWIS80={mw:.6f}")
-        print("  权重分配:", [float(f"{x:.4f}") for x in weights])
+            print(f"  Model: {tag:35s} | mean IS80={mw:.6f}")
+        print("  Weights:", [float(f"{x:.4f}") for x in weights])
 
 def main():
     ap = argparse.ArgumentParser()
@@ -248,7 +247,7 @@ def main():
     elif args.country: countries = [args.country]
 
     for c in countries:
-        print(f"\n\n######## 开始计算 Ensemble: {c} ########")
+        print(f"\n\n######## Starting Ensemble calculation for {c} ########")
         try:
             run_one_country(results_root, c, target)
         except Exception as e:

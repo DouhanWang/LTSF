@@ -55,16 +55,7 @@ def mean_WIS_interval(pred_lower, pred_upper, true, alpha):
     is_alpha = width + (2.0 / alpha) * below + (2.0 / alpha) * above
     return np.mean(is_alpha)
 
-# def metric(pred, true):
-#     mae = MAE(pred, true)
-#     mse = MSE(pred, true)
-#     rmse = RMSE(pred, true)
-#     mape = MAPE(pred, true)
-#     mspe = MSPE(pred, true)
-#     rse = RSE(pred, true)
-#     corr = CORR(pred, true)
-#
-#     return mae, mse, rmse, mape, mspe, rse, corr
+
 def metric(pred, true, quantiles=None):
     """
     pred: [B, L, C] for deterministic, or [B, L, C*Q] for quantile outputs
@@ -126,17 +117,5 @@ def metric(pred, true, quantiles=None):
         'WMAPE': wmape,
     }
 
-    # # --- Add coverage metrics if quantiles exist ---
-    # if pred_reshaped is not None:
-    #     picp = PICP(lower_bound, upper_bound, true)
-    #     pinaw = PINAW(lower_bound, upper_bound, true)
-    #     results.update({'PICP': picp, 'PINAW': pinaw})
-    #     wis = mean_WIS(pred_reshaped, true, quantiles)
-    #
-    #     results.update({
-    #         'PICP': picp,
-    #         'PINAW': pinaw,
-    #         'WIS': wis,  # mean WIS
-    #     })
 
     return results

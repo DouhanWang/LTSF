@@ -1,6 +1,16 @@
+# Copyright 2026 DouhanWang. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
 import pandas as pd
 import numpy as np
-
+'''
+Generate endogenous augmentations of ILI data by shifting the peak and adding realistic noise. And combine with real data (item_id=0) to 
+create a larger dataset(data aug). 
+'''
 def shift_with_reflect(a: np.ndarray, k: int) -> np.ndarray:
     """
     Shift 1D array by k steps without wrap-around.

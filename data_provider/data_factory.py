@@ -1,11 +1,11 @@
-from epi4cast.data_provider.data_loader import Dataset_ETT_hour, Dataset_ETT_minute, Dataset_Custom, Dataset_Pred
+# Copyright 2022 DLinear Authors.
+# Licensed under the Apache License, Version 2.0
+# 
+# --- Modified by DouhanWang in 2026 ---
+from epi4cast.data_provider.data_loader import Dataset_Custom, Dataset_Pred
 from torch.utils.data import DataLoader
 
 data_dict = {
-    'ETTh1': Dataset_ETT_hour,
-    'ETTh2': Dataset_ETT_hour,
-    'ETTm1': Dataset_ETT_minute,
-    'ETTm2': Dataset_ETT_minute,
     'custom': Dataset_Custom,
 }
 
@@ -24,7 +24,7 @@ def data_provider(args, flag):
 
     elif flag in ['test', 'val']:
         shuffle_flag = False
-        drop_last = False           # ✅ 关键：val/test 不丢 batch
+        drop_last = False           # val/test don't drop batch
         freq = args.freq
         batch_size = args.batch_size
 
@@ -48,12 +48,11 @@ def data_provider(args, flag):
 
     print(flag, len(data_set))
 
-    # ✅ 关键：防止 batch_size > dataset 导致某些情况下 loader 为空（尤其你不小心又把 drop_last 打开时）
+    # Prevent batch_size > dataset in some cases where loader would be empty (especially if you accidentally enable drop_last)
     if flag in ['test', 'val'] and len(data_set) > 0:
         batch_size = min(batch_size, len(data_set))
     elif flag in ['test', 'val'] and len(data_set) == 0:
-        batch_size = 1  # 随便设一个，下面会在 test() 里报更清晰的错
-
+        batch_size = 1  # Set a default value, clearer error will be reported in test()
     data_loader = DataLoader(
         data_set,
         batch_size=batch_size,

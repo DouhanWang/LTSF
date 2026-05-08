@@ -1,3 +1,10 @@
+# Copyright 2026 DouhanWang. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
 from __future__ import annotations
 from pathlib import Path
 import pandas as pd
@@ -23,7 +30,7 @@ def build_respicast_wide_targetcol(
     clip_lower_at_zero: bool = True,
 ) -> None:
     script_dir = Path(__file__).resolve().parent
-    project_root = script_dir  # 脚本在 epi4cast/ 下就用它
+    project_root = script_dir  
 
     if countries is None:
         countries = ["BE", "CZ", "DK", "FR", "IE", "IT", "NL", "PL", "RO"]
@@ -61,7 +68,7 @@ def build_respicast_wide_targetcol(
 
     all_df = pd.concat(frames, ignore_index=True)
 
-    # 清洗
+   
     all_df = all_df[all_df["target"] == target_name].copy()
     all_df["target_end_date"] = pd.to_datetime(all_df["target_end_date"], errors="coerce")
     all_df["horizon"] = pd.to_numeric(all_df["horizon"], errors="coerce").astype("Int64")
@@ -103,10 +110,10 @@ def build_respicast_wide_targetcol(
 
             wide = med.merge(q10, on="date", how="outer").merge(q90, on="date", how="outer")
 
-            # 同一天重复 -> 取最后一条
+          
             wide = wide.sort_values("date").groupby("date", as_index=False).last()
 
-            # 列顺序：date, target, lower80, upper80
+           
             wide = wide[["date", "target", "lower80", "upper80"]].copy()
 
             if clip_lower_at_zero:

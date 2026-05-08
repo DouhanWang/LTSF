@@ -1,3 +1,10 @@
+# Copyright 2026 DouhanWang. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
 # Create log directories if they don't exist
 if (!(Test-Path "./logs")) {
     New-Item -ItemType Directory -Path "./logs" | Out-Null
@@ -24,7 +31,6 @@ foreach ($seq_len in $seq_lengths) {
               Write-Host "Starting INCIDENZA: Running $model_name on combined Italy ILI dataset with seq_len=$seq_len, moving_avg = $moving_avg ..." -ForegroundColor Cyan
               # Run the Python experiment
               # PowerShell uses a backtick ` for line continuation
-              # model_id A原本是MS
               & $PY -u run_longExp.py `
            --is_training 1 `
            --root_path ./dataset/ `
