@@ -139,8 +139,8 @@ def make_bar_chart(wins_df, title, ax, show_legend=True):
 fig, axes = plt.subplots(2, 1, figsize=(14, 10))
 
 
-make_bar_chart(mae_wins, "MAE — model wins per forecast step", axes[0], show_legend=True)
-make_bar_chart(wis_wins, "IS₈₀ — model wins per forecast step", axes[1], show_legend=False)
+make_bar_chart(mae_wins, "MAE — model wins per forecasting horizon", axes[0], show_legend=True)
+make_bar_chart(wis_wins, "IS₈₀ — model wins per forecasting horizon", axes[1], show_legend=False)
 
 for ax, label in zip(axes, ["(a)", "(b)"]):
     ax.text(-0.07, 1.05, label, transform=ax.transAxes,

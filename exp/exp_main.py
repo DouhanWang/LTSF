@@ -4,7 +4,7 @@
 # --- Modified by DouhanWang in 2026 ---
 from epi4cast.data_provider.data_factory import data_provider
 from epi4cast.exp.exp_basic import Exp_Basic
-from epi4cast.models import Informer, Autoformer, Transformer, DLinear, Linear, NLinear, LSTM, Naive, ARIMA
+from epi4cast.models import ARIMA, Autoformer, DLinear, LSTM, Naive
 from epi4cast.utils.tools import EarlyStopping, adjust_learning_rate, visual, test_params_flop
 from epi4cast.utils.metrics import metric, mean_WIS_interval, PICP
 
@@ -36,11 +36,7 @@ class Exp_Main(Exp_Basic):
     def _build_model(self):
         model_dict = {
             'Autoformer': Autoformer,
-            'Transformer': Transformer,
-            'Informer': Informer,
             'DLinear': DLinear,
-            'NLinear': NLinear,
-            'Linear': Linear,
             'LSTM': LSTM,
             'Naive': Naive,
             'ARIMA': ARIMA,
